@@ -3,7 +3,7 @@ require 'redis'
 class Redlock
     DefaultRetryCount=3
     DefaultRetryDelay=200
-    ClockSkewFactor = 0.01
+    ClockDriftFactor = 0.01
     UnlockScript='
     if redis.call("get",KEYS[1]) == ARGV[1] then
         return redis.call("del",KEYS[1])
@@ -60,11 +60,11 @@ class Redlock
             @servers.each{|s|
                 n += 1 if lock_instance(s,resource,val,ttl)
             }
-            # Add 2 milliseconds to the skew to account for Redis expires
-            # precision, which is 1 milliescond, plus 1 millisecond min skew
+            # Add 2 milliseconds to the drift to account for Redis expires
+            # precision, which is 1 milliescond, plus 1 millisecond min drift 
             # for small TTLs.
-            skew = (ttl*ClockSkewFactor).to_i + 2
-            validity_time = ttl - ((Time.now.to_f*1000).to_i - start_time) - skew
+            drift = (ttl*ClockDriftFactor).to_i + 2
+            validity_time = ttl-((Time.now.to_f*1000).to_i - start_time)-drift 
             if n >= @quorum && validity_time > 0
                 return {
                     :validity => validity_time,
