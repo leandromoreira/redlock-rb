@@ -4,7 +4,7 @@ Distributed locks are a very useful primitive in many environments where differe
 
 There are a number of libraries and blog posts describing how to implement a DLM (Distributed Lock Manager) with Redis, but every library uses a different approach, and many use a simple approach with lower guarantees compared to what can be achieved with slightly more complex designs.
 
-This lib is an attempt to provide an implementation to a proposed distributed locks with Redis. Totally inspired by: ( http://redis.io/topics/distlock )
+This lib is an attempt to provide an implementation to a proposed distributed locks with Redis. Totally inspired by: [Redis topic distlock](http://redis.io/topics/distlock)
 
 ## Installation
 
@@ -21,6 +21,10 @@ And then execute:
 Or install it yourself as:
 
     $ gem install redlock
+
+## Documentation
+
+[RubyDoc](http://www.rubydoc.info/github/leandromoreira/redlock-rb/)
 
 ## Usage example
 
@@ -51,7 +55,7 @@ Make sure you have at least 3 redis instances `redis-server --port 777[7-9]`
 
 ## Contributing
 
-1. Fork it ( https://github.com/leandromoreira/redlock_rb/fork )
+1. [Fork it](https://github.com/leandromoreira/redlock_rb/fork)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
