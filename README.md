@@ -1,35 +1,58 @@
-Redlock-rb - Redis distributed locks in Ruby
+# RedlockRb - A ruby distributed lock using redis.
 
-This Ruby lib implements the Redis-based distributed lock manager algorithm [described in this blog post](http://antirez.com/news/77).
+Distributed locks are a very useful primitive in many environments where different processes require to operate with shared resources in a mutually exclusive way.
 
-To create a lock manager:
+There are a number of libraries and blog posts describing how to implement a DLM (Distributed Lock Manager) with Redis, but every library uses a different approach, and many use a simple approach with lower guarantees compared to what can be achieved with slightly more complex designs.
 
-    dlm = Redlock.new("redis://127.0.0.1:6379","redis://127.0.0.1:6380","redis://127.0.0.1:6381")
+This lib is an attempt to provide an implementation to a proposed distributed locks with Redis. Totally inspired by: ( http://redis.io/topics/distlock )
 
-To acquire a lock:
+## Installation
 
-    my_lock = dlm.lock("my_resource_name",1000)
+Add this line to your application's Gemfile:
 
-Where the resource name is an unique identifier of what you are trying to lock
-and 1000 is the number of milliseconds for the validity time.
+```ruby
+gem 'redlock'
+```
 
-The returned value is `false` if the lock was not acquired (you may try again),
-otherwise an hash representing the lock is returned, having three fields:
+And then execute:
 
-* :validity, an integer representing the number of milliseconds the lock will be valid.
-* :resource, the name of the locked resource as specified by the user.
-* :val, a random value which is used to safe reclaim the lock.
+    $ bundle
 
-To release a lock:
+Or install it yourself as:
 
-    dlm.unlock(my_lock)
+    $ gem install redlock
 
-It is possible to setup the number of retries (by default 3) and the retry
-delay (by default 200 milliseconds) used to acquire the lock. The retry is
-actually choosen at random between 0 milliseconds and the specified value.
-The `set_retry` method can be used in order to configure the retry count
-and delay range:
+## Usage example
 
-    dlm.set_retry(3,200)
+```ruby
+  # Locking
+  lock_manager = Redlock::Client.new([ "redis://127.0.0.1:7777", "redis://127.0.0.1:7778", "redis://127.0.0.1:7779" ])
+  first_try_lock_info = lock_manager.lock("resource_key", 2000)
+  second_try_lock_info = lock_manager.lock("resource_key", 2000)
 
-**Disclaimer**: This code implements an algorithm which is currently a proposal, it was not formally analyzed. Make sure to understand how it works before using it in your production environments.
+  # it prints lock info
+  p first_try_lock_info
+  # it prints false
+  p second_try_lock_info
+
+  # Unlocking
+  lock_manager.unlock(first_try_lock_info)
+  second_try_lock_info = lock_manager.lock("resource_key", 2000)
+
+  # now it prints lock info
+  p second_try_lock_info
+```
+
+## Run tests
+
+Make sure you have at least 3 redis instances `redis-server --port 777[7-9]`
+
+   $ rspec
+
+## Contributing
+
+1. Fork it ( https://github.com/leandromoreira/redlock_rb/fork )
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Add some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create a new Pull Request
