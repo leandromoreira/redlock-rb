@@ -1,4 +1,4 @@
-# RedlockRb - A ruby distributed lock using redis.
+# Redlock - A ruby distributed lock using redis.
 
 Distributed locks are a very useful primitive in many environments where different processes require to operate with shared resources in a mutually exclusive way.
 
