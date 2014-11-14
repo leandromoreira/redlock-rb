@@ -55,7 +55,7 @@ Make sure you have at least 3 redis instances `redis-server --port 777[7-9]`
 
 ## Contributing
 
-1. [Fork it](https://github.com/leandromoreira/redlock_rb/fork)
+1. [Fork it](https://github.com/leandromoreira/redlock-rb/fork)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
