@@ -1,10 +1,10 @@
 # Redlock - A ruby distributed lock using redis.
 
-Distributed locks are a very useful primitive in many environments where different processes require to operate with shared resources in a mutually exclusive way.
+> Distributed locks are a very useful primitive in many environments where different processes require to operate  with shared resources in a mutually exclusive way.
+> 
+> There are a number of libraries and blog posts describing how to implement a DLM (Distributed Lock Manager) with Redis, but every library uses a different approach, and many use a simple approach with lower guarantees compared to what can be achieved with slightly more complex designs.
 
-There are a number of libraries and blog posts describing how to implement a DLM (Distributed Lock Manager) with Redis, but every library uses a different approach, and many use a simple approach with lower guarantees compared to what can be achieved with slightly more complex designs.
-
-This lib is an attempt to provide an implementation to a proposed distributed locks with Redis. Totally inspired by: [Redis topic distlock](http://redis.io/topics/distlock)
+This is an implementation of a proposed [distributed lock algorithm with Redis](http://redis.io/topics/distlock).It stated as a forke from [antirez implementation.](https://github.com/antirez/redlock-rb)
 
 ## Installation
 
@@ -24,7 +24,7 @@ Or install it yourself as:
 
 ## Documentation
 
-[RubyDoc](http://www.rubydoc.info/github/leandromoreira/redlock-rb/)
+[RubyDoc 0.0.1](http://www.rubydoc.info/gems/redlock/0.0.1/frames)
 
 ## Usage example
 
