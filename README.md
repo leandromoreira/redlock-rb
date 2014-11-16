@@ -34,7 +34,7 @@ Or install it yourself as:
   first_try_lock_info = lock_manager.lock("resource_key", 2000)
   second_try_lock_info = lock_manager.lock("resource_key", 2000)
 
-  # it prints lock info
+  # it prints lock info {validity: 1987, resource: "resource_key", value: "generated_uuid4"}
   p first_try_lock_info
   # it prints false
   p second_try_lock_info
