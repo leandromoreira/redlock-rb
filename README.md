@@ -4,7 +4,7 @@
 > 
 > There are a number of libraries and blog posts describing how to implement a DLM (Distributed Lock Manager) with Redis, but every library uses a different approach, and many use a simple approach with lower guarantees compared to what can be achieved with slightly more complex designs.
 
-This is an implementation of a proposed [distributed lock algorithm with Redis](http://redis.io/topics/distlock).It stated as a forke from [antirez implementation.](https://github.com/antirez/redlock-rb)
+This is an implementation of a proposed [distributed lock algorithm with Redis](http://redis.io/topics/distlock). It started as a fork from [antirez implementation.](https://github.com/antirez/redlock-rb)
 
 ## Installation
 
