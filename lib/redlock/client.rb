@@ -3,6 +3,7 @@ require 'securerandom'
 
 module Redlock
   class Client
+    DEFAULT_REDIS_URLS  = ['redis://localhost:6379']
     DEFAULT_RETRY_COUNT = 3
     DEFAULT_RETRY_DELAY = 200
     CLOCK_DRIFT_FACTOR = 0.01
@@ -20,7 +21,7 @@ module Redlock
     # +options+:: You can override the default value for `retry_count` and `retry_delay`.
     #    * `retry_count` being how many times it'll try to lock a resource (default: 3)
     #    * `retry_delay` being how many ms to sleep before try to lock again (default: 200)
-    def initialize(server_urls, options={})
+    def initialize(server_urls=DEFAULT_REDIS_URLS, options={})
       @servers = server_urls.map {|url| Redis.new(url: url)}
       @quorum = server_urls.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
@@ -29,11 +30,35 @@ module Redlock
 
     # Locks a resource for a given time. (in milliseconds)
     # Params:
-    # +resource+:: the resource(or key) string to be locked.
+    # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
-    def lock(resource, ttl)
+    def lock(resource, ttl, &block)
+      lock_info = lock_instances(resource, ttl)
+
+      if block_given?
+        begin
+          yield lock_info
+          !!lock_info
+        ensure
+          unlock(lock_info) if lock_info
+        end
+      else
+        lock_info
+      end
+    end
+
+    # Unlocks a resource.
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource.
+    def unlock(lock_info)
+      @servers.each{|s| unlock_instance(s, lock_info[:resource], lock_info[:value])}
+    end
+
+    private
+
+    def lock_instances(resource, ttl)
       value = SecureRandom.uuid
-      @retry_count.times {
+      @retry_count.times do
         locked_instances = 0
         start_time = (Time.now.to_f * 1000).to_i
         @servers.each do |s|
@@ -55,18 +80,11 @@ module Redlock
         end
         # Wait a random delay before to retry
         sleep(rand(@retry_delay).to_f / 1000)
-      }
+      end
+
       return false
     end
 
-    # Unlocks a resource.
-    # Params:
-    # +lock_info+:: the has acquired when you locked the resource.
-    def unlock(lock_info)
-      @servers.each{|s| unlock_instance(s, lock_info[:resource], lock_info[:value])}
-    end
-
-    private
     def lock_instance(redis, resource, val, ttl)
       begin
         return redis.client.call([:set, resource, val, :nx, :px, ttl])
