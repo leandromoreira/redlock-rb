@@ -33,6 +33,53 @@ RSpec.describe Redlock::Client do
         expect(lock_info).to eql(false)
       end
     end
+
+    describe 'block syntax' do
+      context 'when lock is available' do
+        it 'locks' do
+          lock_manager.lock(resource_key, ttl) do |_|
+            expect(resource_key).to_not be_lockable(lock_manager, ttl)
+          end
+        end
+
+        it 'passes lock information as block argument' do
+          lock_manager.lock(resource_key, ttl) do |lock_info|
+            expect(lock_info).to be_lock_info_for(resource_key)
+          end
+        end
+
+        it 'returns true' do
+          rv = lock_manager.lock(resource_key, ttl) {}
+          expect(rv).to eql(true)
+        end
+
+        it 'automatically unlocks' do
+          lock_manager.lock(resource_key, ttl) {}
+          expect(resource_key).to be_lockable(lock_manager, ttl)
+        end
+
+        it 'automatically unlocks when block raises exception' do
+          lock_manager.lock(resource_key, ttl) { fail } rescue nil
+          expect(resource_key).to be_lockable(lock_manager, ttl)
+        end
+      end
+
+      context 'when lock is not available' do
+        before { @another_lock_info = lock_manager.lock(resource_key, ttl) }
+        after { lock_manager.unlock(@another_lock_info) }
+
+        it 'passes false as block argument' do
+          lock_manager.lock(resource_key, ttl) do |lock_info|
+            expect(lock_info).to eql(false)
+          end
+        end
+
+        it 'returns false' do
+          rv = lock_manager.lock(resource_key, ttl) {}
+          expect(rv).to eql(false)
+        end
+      end
+    end
   end
 
   describe 'unlock' do
