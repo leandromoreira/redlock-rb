@@ -2,7 +2,8 @@ require 'spec_helper'
 require 'securerandom'
 
 RSpec.describe Redlock::Client do
-  let(:lock_manager) { Redlock::Client.new([ "redis://127.0.0.1:7777", "redis://127.0.0.1:7778", "redis://127.0.0.1:7779" ]) }
+  # It is recommended to have at least 3 servers in production
+  let(:lock_manager) { Redlock::Client.new }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
 

@@ -1,3 +1,7 @@
+# coding: utf-8
+# $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+require 'coveralls'
+Coveralls.wear!
 require 'redlock'
 
 LOCK_INFO_KEYS = %i{validity resource value}
