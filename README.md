@@ -47,6 +47,18 @@ Or install it yourself as:
   p second_try_lock_info
 ```
 
+There's also a block version that automatically unlocks the lock:
+
+```ruby
+lock_manager.lock("resource_key", 2000) do |locked|
+  if locked
+    # critical code
+  else
+    # error handling
+  end
+end
+```
+
 ## Run tests
 
 Make sure you have at least 3 redis instances `redis-server --port 777[7-9]`
