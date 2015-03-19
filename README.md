@@ -24,7 +24,7 @@ Or install it yourself as:
 
 ## Documentation
 
-[RubyDoc 0.0.1](http://www.rubydoc.info/gems/redlock/0.0.1/frames)
+[RubyDoc](http://www.rubydoc.info/gems/redlock/frames)
 
 ## Usage example
 
