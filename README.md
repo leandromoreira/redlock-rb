@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/leandromoreira/redlock-rb.svg?branch=master)](https://travis-ci.org/leandromoreira/redlock-rb)
+[![Coverage Status](https://coveralls.io/repos/leandromoreira/redlock-rb/badge.svg?branch=master)](https://coveralls.io/r/leandromoreira/redlock-rb?branch=master)
+
 # Redlock - A ruby distributed lock using redis.
 
 > Distributed locks are a very useful primitive in many environments where different processes require to operate  with shared resources in a mutually exclusive way.
