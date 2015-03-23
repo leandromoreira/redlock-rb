@@ -87,19 +87,13 @@ module Redlock
     end
 
     def lock_instance(redis, resource, val, ttl)
-      begin
-        return redis.client.call([:set, resource, val, :nx, :px, ttl])
-      rescue
-        return false
-      end
+      redis.client.call([:set, resource, val, :nx, :px, ttl])
     end
 
     def unlock_instance(redis, resource, val)
-      begin
-        redis.client.call([:eval, UNLOCK_SCRIPT, 1, resource, val])
-      rescue
-        # Nothing to do, unlocking is just a best-effort attempt.
-      end
+      redis.client.call([:eval, UNLOCK_SCRIPT, 1, resource, val])
+    rescue
+      # Nothing to do, unlocking is just a best-effort attempt.
     end
   end
 end
