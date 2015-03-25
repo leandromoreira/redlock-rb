@@ -3,19 +3,22 @@ require 'securerandom'
 
 module Redlock
   class Client
-    DEFAULT_REDIS_URLS  = ['redis://localhost:6379']
-    DEFAULT_RETRY_COUNT = 3
-    DEFAULT_RETRY_DELAY = 200
-    CLOCK_DRIFT_FACTOR  = 0.01
+    DEFAULT_REDIS_URLS    = ['redis://localhost:6379']
+    DEFAULT_REDIS_TIMEOUT = 0.1
+    DEFAULT_RETRY_COUNT   = 3
+    DEFAULT_RETRY_DELAY   = 200
+    CLOCK_DRIFT_FACTOR    = 0.01
 
     # Create a distributed lock manager implementing redlock algorithm.
     # Params:
     # +server_urls+:: the array of redis hosts.
     # +options+:: You can override the default value for `retry_count` and `retry_delay`.
-    #    * `retry_count` being how many times it'll try to lock a resource (default: 3)
-    #    * `retry_delay` being how many ms to sleep before try to lock again (default: 200)
+    #    * `retry_count`   being how many times it'll try to lock a resource (default: 3)
+    #    * `retry_delay`   being how many ms to sleep before try to lock again (default: 200)
+    #    * `redis_timeout` being how the Redis timeout will be set in seconds (default: 0.1)
     def initialize(server_urls = DEFAULT_REDIS_URLS, options = {})
-      @servers = server_urls.map { |url| RedisInstance.new(url) }
+      redis_timeout = options[:redis_timeout] || DEFAULT_REDIS_TIMEOUT
+      @servers = server_urls.map { |url| RedisInstance.new(url, redis_timeout) }
       @quorum = server_urls.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
@@ -59,8 +62,8 @@ module Redlock
         end
       eos
 
-      def initialize(url)
-        @redis = Redis.new(url: url)
+      def initialize(url, timeout)
+        @redis  = Redis.new(url: url, timeout: timeout)
       end
 
       def lock(resource, val, ttl)
