@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{Distributed lock using Redis written in Ruby.}
   spec.description   = %q{Distributed lock using Redis written in Ruby. Highly inspired by https://github.com/antirez/redlock-rb.}
   spec.homepage      = "https://github.com/leandromoreira/redlock-rb"
-  spec.license       = "MIT"
+  spec.license       = 'BSD-2-Clause'
 
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
