@@ -3,6 +3,7 @@
 [![Code Climate](https://codeclimate.com/github/leandromoreira/redlock-rb/badges/gpa.svg)](https://codeclimate.com/github/leandromoreira/redlock-rb)
 [![Dependency Status](https://gemnasium.com/leandromoreira/redlock-rb.svg)](https://gemnasium.com/leandromoreira/redlock-rb)
 [![Gem Version](https://badge.fury.io/rb/redlock.svg)](http://badge.fury.io/rb/redlock)
+[![security](https://hakiri.io/github/leandromoreira/redlock-rb/master.svg)](https://hakiri.io/github/leandromoreira/redlock-rb/master)
 
 # Redlock - A ruby distributed lock using redis.
 
