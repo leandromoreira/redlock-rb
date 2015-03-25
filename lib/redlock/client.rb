@@ -90,15 +90,15 @@ module Redlock
       value = SecureRandom.uuid
 
       locked, time_elapsed = timed do
-        @servers.select { |s| s.lock(resource, value, ttl) }
+        @servers.select { |s| s.lock(resource, value, ttl) }.size
       end
 
       validity = ttl - time_elapsed - drift(ttl)
 
-      if locked.size >= @quorum && validity >= 0
+      if locked >= @quorum && validity >= 0
         { validity: validity, resource: resource, value: value }
       else
-        locked.each { |s| s.unlock(resource, value) }
+        @servers.each { |s| s.unlock(resource, value) }
         false
       end
     end
