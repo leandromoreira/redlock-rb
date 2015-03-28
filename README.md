@@ -4,6 +4,7 @@
 [![Dependency Status](https://gemnasium.com/leandromoreira/redlock-rb.svg)](https://gemnasium.com/leandromoreira/redlock-rb)
 [![Gem Version](https://badge.fury.io/rb/redlock.svg)](http://badge.fury.io/rb/redlock)
 [![security](https://hakiri.io/github/leandromoreira/redlock-rb/master.svg)](https://hakiri.io/github/leandromoreira/redlock-rb/master)
+[![Inline docs](http://inch-ci.org/github/leandromoreira/redlock-rb.svg?branch=master)](http://inch-ci.org/github/leandromoreira/redlock-rb)
 
 # Redlock - A ruby distributed lock using redis.
 
