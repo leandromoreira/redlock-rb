@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/leandromoreira/redlock-rb.png?label=ready&title=Ready)](https://waffle.io/leandromoreira/redlock-rb)
 [![Build Status](https://travis-ci.org/leandromoreira/redlock-rb.svg?branch=master)](https://travis-ci.org/leandromoreira/redlock-rb)
 [![Coverage Status](https://coveralls.io/repos/leandromoreira/redlock-rb/badge.svg?branch=master)](https://coveralls.io/r/leandromoreira/redlock-rb?branch=master)
 [![Code Climate](https://codeclimate.com/github/leandromoreira/redlock-rb/badges/gpa.svg)](https://codeclimate.com/github/leandromoreira/redlock-rb)
