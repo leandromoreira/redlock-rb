@@ -8,7 +8,7 @@
 [![Inline docs](http://inch-ci.org/github/leandromoreira/redlock-rb.svg?branch=master)](http://inch-ci.org/github/leandromoreira/redlock-rb)
 [![Join the chat at https://gitter.im/leandromoreira/redlock-rb](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/leandromoreira/redlock-rb?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-[![codeship](https://codeship.com/projects/redlock-rb/status?branch=master)]
+[codeship](https://codeship.com/projects/73593/status?branch=master)
 
 
 # Redlock - A ruby distributed lock using redis.
