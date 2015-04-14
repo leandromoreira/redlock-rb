@@ -7,6 +7,7 @@
 [![security](https://hakiri.io/github/leandromoreira/redlock-rb/master.svg)](https://hakiri.io/github/leandromoreira/redlock-rb/master)
 [![Inline docs](http://inch-ci.org/github/leandromoreira/redlock-rb.svg?branch=master)](http://inch-ci.org/github/leandromoreira/redlock-rb)
 [![Join the chat at https://gitter.im/leandromoreira/redlock-rb](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/leandromoreira/redlock-rb?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://drone.io/github.com/leandromoreira/redlock-rb/status.png)](https://drone.io/github.com/leandromoreira/redlock-rb/latest)
 
 [![Codeship](https://codeship.com/projects/901ff180-c1ad-0132-1a88-3eb2295b72b3/status?branch=master)](https://codeship.com/projects/901ff180-c1ad-0132-1a88-3eb2295b72b3/status?branch=master)
 
