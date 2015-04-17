@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    redlock (0.0.4)
+    redlock (0.1.0)
       redis (~> 3, >= 3.0.5)
 
 GEM

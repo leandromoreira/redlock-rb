@@ -11,15 +11,21 @@ module Redlock
 
     # Create a distributed lock manager implementing redlock algorithm.
     # Params:
-    # +server_urls+:: the array of redis hosts.
+    # +servers+:: The array of redis connection URLs or Redis connection instances. Or a mix of both.
     # +options+:: You can override the default value for `retry_count` and `retry_delay`.
     #    * `retry_count`   being how many times it'll try to lock a resource (default: 3)
     #    * `retry_delay`   being how many ms to sleep before try to lock again (default: 200)
     #    * `redis_timeout` being how the Redis timeout will be set in seconds (default: 0.1)
-    def initialize(server_urls = DEFAULT_REDIS_URLS, options = {})
+    def initialize(servers = DEFAULT_REDIS_URLS, options = {})
       redis_timeout = options[:redis_timeout] || DEFAULT_REDIS_TIMEOUT
-      @servers = server_urls.map { |url| RedisInstance.new(url, redis_timeout) }
-      @quorum = server_urls.length / 2 + 1
+      @servers = servers.map do |server|
+        if server.is_a?(String)
+          RedisInstance.new(:url => server, :timeout => redis_timeout)
+        else
+          RedisInstance.new(server)
+        end
+      end
+      @quorum = servers.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
     end
@@ -62,16 +68,24 @@ module Redlock
         end
       eos
 
-      def initialize(url, timeout)
-        @redis  = Redis.new(url: url, timeout: timeout)
+      def initialize(connection)
+        if connection.respond_to?(:client)
+          @redis = connection
+        else
+          @redis  = Redis.new(connection)
+        end
+      end
+
+      def redis
+        @redis
       end
 
       def lock(resource, val, ttl)
-        @redis.client.call([:set, resource, val, :nx, :px, ttl])
+        redis.client.call([:set, resource, val, 'NX', 'PX', ttl])
       end
 
       def unlock(resource, val)
-        @redis.client.call([:eval, UNLOCK_SCRIPT, 1, resource, val])
+        redis.client.call([:eval, UNLOCK_SCRIPT, 1, resource, val])
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
       end
