@@ -60,6 +60,13 @@ Or install it yourself as:
   p second_try_lock_info
 ```
 
+Redlock works seamlessly with [redis sentinel](http://redis.io/topics/sentinel), which is supported in redis 3.2+. It also allows clients to set any other arbitrary options on the Redis connection, e.g. password, driver, and more.
+
+```ruby
+servers = [ 'redis://localhost:6379', Redis.new(:url => 'redis://someotherhost:6379') ]
+redlock = Redlock::Client.new(servers)
+```
+
 There's also a block version that automatically unlocks the lock:
 
 ```ruby
