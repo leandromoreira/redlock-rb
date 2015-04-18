@@ -20,7 +20,7 @@ module Redlock
       redis_timeout = options[:redis_timeout] || DEFAULT_REDIS_TIMEOUT
       @servers = servers.map do |server|
         if server.is_a?(String)
-          RedisInstance.new(:url => server, :timeout => redis_timeout)
+          RedisInstance.new(url: server, timeout: redis_timeout)
         else
           RedisInstance.new(server)
         end
