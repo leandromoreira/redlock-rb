@@ -7,6 +7,18 @@ RSpec.describe Redlock::Client do
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
 
+  describe 'initialize' do
+    it 'accepts both redis URLs and Redis objects' do
+      servers = [ 'redis://localhost:6379', Redis.new(:url => 'redis://someotherhost:6379') ]
+      redlock = Redlock::Client.new(servers)
+
+      redlock_servers = redlock.instance_variable_get(:@servers)
+
+      expect(redlock_servers.one? { |s| s.redis.client.host == 'localhost' })
+      expect(redlock_servers.one? { |s| s.redis.client.port == 'someotherhost' })
+    end
+  end
+
   describe 'lock' do
     context 'when lock is available' do
       after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
