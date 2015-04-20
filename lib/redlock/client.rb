@@ -76,16 +76,12 @@ module Redlock
         end
       end
 
-      def redis
-        @redis
-      end
-
       def lock(resource, val, ttl)
-        redis.client.call([:set, resource, val, 'NX', 'PX', ttl])
+        @redis.client.call([:set, resource, val, 'NX', 'PX', ttl])
       end
 
       def unlock(resource, val)
-        redis.client.call([:eval, UNLOCK_SCRIPT, 1, resource, val])
+        @redis.client.call([:eval, UNLOCK_SCRIPT, 1, resource, val])
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
       end

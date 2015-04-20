@@ -12,10 +12,11 @@ RSpec.describe Redlock::Client do
       servers = [ 'redis://localhost:6379', Redis.new(url: 'redis://someotherhost:6379') ]
       redlock = Redlock::Client.new(servers)
 
-      redlock_servers = redlock.instance_variable_get(:@servers)
+      redlock_servers = redlock.instance_variable_get(:@servers).map do |s|
+        s.instance_variable_get(:@redis).client.host
+      end
 
-      expect(redlock_servers.one? { |s| s.redis.client.host == 'localhost' })
-      expect(redlock_servers.one? { |s| s.redis.client.port == 'someotherhost' })
+      expect(redlock_servers).to match_array(%w{ localhost someotherhost })
     end
   end
 
