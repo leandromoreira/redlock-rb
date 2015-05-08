@@ -20,11 +20,12 @@ module Redlock
       redis_timeout = options[:redis_timeout] || DEFAULT_REDIS_TIMEOUT
       @servers = servers.map do |server|
         if server.is_a?(String)
-          RedisInstance.new(url: server, timeout: redis_timeout)
+          RedisInstance.new(:url => server, :timeout => redis_timeout)
         else
           RedisInstance.new(server)
         end
       end
+
       @quorum = servers.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
@@ -77,7 +78,7 @@ module Redlock
       end
 
       def lock(resource, val, ttl)
-        @redis.set(resource, val, nx: true, px: ttl)
+        @redis.set(resource, val, :nx => true, :px => ttl)
       end
 
       def unlock(resource, val)
@@ -109,7 +110,7 @@ module Redlock
       validity = ttl - time_elapsed - drift(ttl)
 
       if locked >= @quorum && validity >= 0
-        { validity: validity, resource: resource, value: value }
+        { :validity => validity, :resource => resource, :value => value }
       else
         @servers.each { |s| s.unlock(resource, value) }
         false
