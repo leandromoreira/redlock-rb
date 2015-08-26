@@ -30,13 +30,27 @@ module Redlock
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
     end
 
+    def testing=(mode)
+      @testing_mode = mode
+    end
+
     # Locks a resource for a given time.
     # Params:
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
     # +block+:: an optional block that automatically unlocks the lock.
     def lock(resource, ttl, &block)
-      lock_info = try_lock_instances(resource, ttl)
+      if @testing_mode == :bypass
+        lock_info = {
+          validity: ttl,
+          resource: resource,
+          value: SecureRandom.uuid
+        }
+      elsif @testing_mode == :fail
+        return false
+      else
+        lock_info = try_lock_instances(resource, ttl)
+      end
 
       if block_given?
         begin
@@ -54,6 +68,8 @@ module Redlock
     # Params:
     # +lock_info+:: the lock that has been acquired when you locked the resource.
     def unlock(lock_info)
+      return if @testing_mode == :bypass
+
       @servers.each { |s| s.unlock(lock_info[:resource], lock_info[:value]) }
     end
 
