@@ -47,7 +47,7 @@ module Redlock
           value: SecureRandom.uuid
         }
       elsif @testing_mode == :fail
-        return false
+        lock_info = false
       else
         lock_info = try_lock_instances(resource, ttl)
       end
