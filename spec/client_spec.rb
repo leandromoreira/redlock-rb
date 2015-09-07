@@ -35,6 +35,18 @@ RSpec.describe Redlock::Client do
 
         expect(@lock_info).to be_lock_info_for(resource_key)
       end
+
+      it 'can extend its own lock' do
+        my_lock_info = lock_manager.lock(resource_key, ttl)
+        @lock_info = lock_manager.lock(resource_key, ttl, extend: my_lock_info)
+        expect(@lock_info).to be_lock_info_for(resource_key)
+      end
+
+      it "doesn't extend lock by default" do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        second_attempt = lock_manager.lock(resource_key, ttl)
+        expect(second_attempt).to eq(false)
+      end
     end
 
     context 'when lock is not available' do
@@ -44,6 +56,12 @@ RSpec.describe Redlock::Client do
       it 'returns false' do
         lock_info = lock_manager.lock(resource_key, ttl)
 
+        expect(lock_info).to eql(false)
+      end
+
+      it "can't extend somebody else's lock" do
+        yet_another_lock_info = @another_lock_info.merge value: 'gibberish'
+        lock_info = lock_manager.lock(resource_key, ttl, extend: yet_another_lock_info)
         expect(lock_info).to eql(false)
       end
     end

@@ -38,8 +38,9 @@ module Redlock
     # Params:
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
+    # +extend+: A lock ("lock_info") to extend.
     # +block+:: an optional block that automatically unlocks the lock.
-    def lock(resource, ttl, &block)
+    def lock(resource, ttl, extend: nil, &block)
       if @testing_mode == :bypass
         lock_info = {
           validity: ttl,
@@ -49,7 +50,7 @@ module Redlock
       elsif @testing_mode == :fail
         lock_info = false
       else
-        lock_info = try_lock_instances(resource, ttl)
+        lock_info = try_lock_instances(resource, ttl, extend)
       end
 
       if block_given?
@@ -83,6 +84,17 @@ module Redlock
           return 0
         end
       eos
+      # thanks to https://github.com/sbertrang/redis-distlock/blob/master/lib/Redis/DistLock.pm
+      # also https://github.com/sbertrang/redis-distlock/issues/2 which proposes the value-checking
+      EXTEND_SCRIPT = <<-eos
+        if redis.call( "get", KEYS[1] ) == ARGV[1] then
+          if redis.call( "set", KEYS[1], ARGV[1], "XX", "PX", ARGV[2] ) then
+            return "OK"
+          end
+        else
+          return redis.call( "set", KEYS[1], ARGV[1], "NX", "PX", ARGV[2] )
+        end
+      eos
 
       def initialize(connection)
         if connection.respond_to?(:client)
@@ -92,10 +104,15 @@ module Redlock
         end
 
         @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
+        @extend_script_sha = @redis.script(:load, EXTEND_SCRIPT)
       end
 
-      def lock(resource, val, ttl)
-        @redis.set(resource, val, nx: true, px: ttl)
+      def lock(resource, val, ttl, extend)
+        if extend
+          @redis.evalsha(@extend_script_sha, keys: [resource], argv: [extend[:value], ttl])
+        else
+          @redis.set(resource, val, nx: true, px: ttl)
+        end
       end
 
       def unlock(resource, val)
@@ -105,9 +122,9 @@ module Redlock
       end
     end
 
-    def try_lock_instances(resource, ttl)
+    def try_lock_instances(resource, ttl, extend)
       @retry_count.times do
-        lock_info = lock_instances(resource, ttl)
+        lock_info = lock_instances(resource, ttl, extend)
         return lock_info if lock_info
 
         # Wait a random delay before retrying
@@ -117,11 +134,11 @@ module Redlock
       false
     end
 
-    def lock_instances(resource, ttl)
+    def lock_instances(resource, ttl, extend)
       value = SecureRandom.uuid
 
       locked, time_elapsed = timed do
-        @servers.select { |s| s.lock(resource, value, ttl) }.size
+        @servers.select { |s| s.lock(resource, value, ttl, extend) }.size
       end
 
       validity = ttl - time_elapsed - drift(ttl)
