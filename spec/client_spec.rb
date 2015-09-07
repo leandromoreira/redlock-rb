@@ -131,4 +131,25 @@ RSpec.describe Redlock::Client do
       expect(resource_key).to be_lockable(lock_manager, ttl)
     end
   end
+
+  describe 'heartbeat' do
+    it 'unlocks if the process dies' do
+      resource_key # memoize it
+      child = nil
+      begin
+        child = fork do
+          lock_manager.lock resource_key, 1000 * 1000              # lock effectively forever
+          sleep
+        end
+        sleep 0.1
+        expect(resource_key).not_to be_lockable(lock_manager, ttl) # the other process still has it
+        Process.kill 'KILL', child
+        expect(resource_key).not_to be_lockable(lock_manager, ttl) # detecting no heartbeat is not instant
+        sleep 2
+        expect(resource_key).to     be_lockable(lock_manager, ttl) # but now it should be cleared because no heartbeat
+      ensure
+        Process.kill('KILL', child) rescue Errno::ESRCH
+      end
+    end
+  end
 end

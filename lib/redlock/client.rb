@@ -1,5 +1,6 @@
 require 'redis'
 require 'securerandom'
+require 'set'
 
 module Redlock
   class Client
@@ -28,6 +29,15 @@ module Redlock
       @quorum = servers.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
+      @heartbeats = Set.new
+      servers.each do |s|
+        Thread.new do
+          loop do
+            @heartbeats.each { |resource| s.heartbeat resource }
+            sleep 1
+          end
+        end
+      end
     end
 
     def testing=(mode)
@@ -69,7 +79,7 @@ module Redlock
     # +lock_info+:: the lock that has been acquired when you locked the resource.
     def unlock(lock_info)
       return if @testing_mode == :bypass
-
+      @heartbeats.delete lock_info[:resource]
       @servers.each { |s| s.unlock(lock_info[:resource], lock_info[:value]) }
     end
 
@@ -95,6 +105,10 @@ module Redlock
       end
 
       def lock(resource, val, ttl)
+        if @redis.exists(resource) and not heartbeat?(resource)
+          sleep 1                   unless heartbeat?(resource) # one last chance
+          @redis.del resource       unless heartbeat?(resource)
+        end
         @redis.set(resource, val, nx: true, px: ttl)
       end
 
@@ -102,6 +116,20 @@ module Redlock
         @redis.evalsha(@unlock_script_sha, keys: [resource], argv: [val])
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
+      end
+
+      def heartbeat(resource)
+        @redis.set(heartbeat_key(resource), nil, px: 2000)
+      end
+
+      private
+
+      def heartbeat?(resource)
+        @redis.exists heartbeat_key(resource)
+      end
+
+      def heartbeat_key(resource)
+        "heartbeat/#{resource}"
       end
     end
 
@@ -127,11 +155,17 @@ module Redlock
       validity = ttl - time_elapsed - drift(ttl)
 
       if locked >= @quorum && validity >= 0
+        start_heartbeat resource
         { validity: validity, resource: resource, value: value }
       else
         @servers.each { |s| s.unlock(resource, value) }
         false
       end
+    end
+
+    def start_heartbeat(resource)
+      @servers.each { |s| s.heartbeat resource }
+      @heartbeats << resource
     end
 
     def drift(ttl)
