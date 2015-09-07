@@ -4,7 +4,7 @@ module Redlock
 
     alias_method :try_lock_instances_without_testing, :try_lock_instances
 
-    def try_lock_instances(resource, ttl)
+    def try_lock_instances(resource, ttl, extend)
       if @testing_mode == :bypass
         {
           validity: ttl,
@@ -14,7 +14,7 @@ module Redlock
       elsif @testing_mode == :fail
         false
       else
-        try_lock_instances_without_testing resource, ttl
+        try_lock_instances_without_testing resource, ttl, extend
       end
     end
 
@@ -28,6 +28,7 @@ module Redlock
       def load_scripts
         begin
           @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
+          @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
         rescue Redis::CommandError
           # ignore
         end
