@@ -94,30 +94,6 @@ RSpec.describe Redlock::Client do
         end
       end
     end
-
-    context 'when testing with bypass mode' do
-      before { lock_manager.testing = :bypass }
-      after { lock_manager.testing = nil }
-
-      it 'bypasses the redis servers' do
-        expect(lock_manager).to_not receive(:try_lock_instances)
-        lock_manager.lock(resource_key, ttl) do |lock_info|
-          expect(lock_info).to be_lock_info_for(resource_key)
-        end
-      end
-    end
-
-    context 'when testing with fail mode' do
-      before { lock_manager.testing = :fail }
-      after { lock_manager.testing = nil }
-
-      it 'fails' do
-        expect(lock_manager).to_not receive(:try_lock_instances)
-        lock_manager.lock(resource_key, ttl) do |lock_info|
-          expect(lock_info).to eql(false)
-        end
-      end
-    end
   end
 
   describe 'unlock' do
