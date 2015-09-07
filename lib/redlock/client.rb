@@ -142,11 +142,12 @@ module Redlock
       end
 
       validity = ttl - time_elapsed - drift(ttl)
+      used_value = extend ? extend[:value] : value
 
       if locked >= @quorum && validity >= 0
-        { validity: validity, resource: resource, value: value }
+        { validity: validity, resource: resource, value: used_value }
       else
-        @servers.each { |s| s.unlock(resource, value) }
+        @servers.each { |s| s.unlock(resource, used_value) }
         false
       end
     end
