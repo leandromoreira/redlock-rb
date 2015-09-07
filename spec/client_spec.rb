@@ -40,6 +40,13 @@ RSpec.describe Redlock::Client do
         my_lock_info = lock_manager.lock(resource_key, ttl)
         @lock_info = lock_manager.lock(resource_key, ttl, extend: my_lock_info)
         expect(@lock_info).to be_lock_info_for(resource_key)
+        expect(@lock_info[:value]).to eq(my_lock_info[:value])
+      end
+
+      it "sets the given value when trying to extend a non-existent lock" do
+        @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'})
+        expect(@lock_info).to be_lock_info_for(resource_key)
+        expect(@lock_info[:value]).to eq('hello world') # really we should test what's in redis
       end
 
       it "doesn't extend lock by default" do
