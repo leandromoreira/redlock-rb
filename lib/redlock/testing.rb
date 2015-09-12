@@ -9,7 +9,7 @@ module Redlock
         {
           validity: ttl,
           resource: resource,
-          value: SecureRandom.uuid
+          value: extend ? extend.fetch(:value) : SecureRandom.uuid
         }
       elsif @testing_mode == :fail
         false
