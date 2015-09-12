@@ -23,5 +23,15 @@ module Redlock
     def unlock(lock_info)
       unlock_without_testing lock_info unless @testing_mode == :bypass
     end
+
+    class RedisInstance
+      def load_scripts
+        begin
+          @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
+        rescue Redis::CommandError
+          # ignore
+        end
+      end
+    end
   end
 end
