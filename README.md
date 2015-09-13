@@ -84,7 +84,7 @@ end
 Make sure you have at least 1 redis instances up.
 
    $ rspec
-   
+
 ## Disclaimer
 
 This code implements an algorithm which is currently a proposal, it was not formally analyzed. Make sure to understand how it works before using it in your production environments. You can see discussion about this approach at [reddit](http://www.reddit.com/r/programming/comments/2nt0nq/distributed_lock_using_redis_implemented_in_ruby/).
