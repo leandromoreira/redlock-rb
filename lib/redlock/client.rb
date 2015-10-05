@@ -34,7 +34,8 @@ module Redlock
     # Params:
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
-    # +block+:: an optional block that automatically unlocks the lock.
+    # +block+:: an optional block to be executed; after its execution, the lock (if successfully
+    # acquired) is automatically unlocked.
     def lock(resource, ttl, &block)
       lock_info = try_lock_instances(resource, ttl)
 
