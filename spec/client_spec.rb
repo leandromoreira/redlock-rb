@@ -107,4 +107,53 @@ RSpec.describe Redlock::Client do
       expect(resource_key).to be_lockable(lock_manager, ttl)
     end
   end
+
+  describe 'with_lock' do
+    context 'when lock is available' do
+      it 'locks' do
+        lock_manager.with_lock(resource_key, ttl) do |_|
+          expect(resource_key).to_not be_lockable(lock_manager, ttl)
+        end
+      end
+
+      it "returns the received block's return value" do
+        rv = lock_manager.with_lock(resource_key, ttl) do
+          :success
+        end
+        expect(rv).to eql(:success)
+      end
+
+      it 'automatically unlocks' do
+        lock_manager.with_lock(resource_key, ttl) {}
+        expect(resource_key).to be_lockable(lock_manager, ttl)
+      end
+
+      it 'automatically unlocks when block raises exception' do
+        lock_manager.with_lock(resource_key, ttl) { fail } rescue nil
+        expect(resource_key).to be_lockable(lock_manager, ttl)
+      end
+    end
+
+    context 'when lock is not available' do
+      before { @another_lock_info = lock_manager.lock(resource_key, ttl) }
+      after { lock_manager.unlock(@another_lock_info) }
+
+      it 'raises a LockException' do
+        expect { lock_manager.with_lock(resource_key, ttl) {} }.to raise_error(Redlock::LockException)
+      end
+
+      it 'does not execute the block' do
+        block_ran = false
+
+        begin
+          lock_manager.with_lock(resource_key, ttl) do
+            block_ran = true
+          end
+        rescue
+        end
+
+        expect(block_ran).to eql(false)
+      end
+    end
+  end
 end

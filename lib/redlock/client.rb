@@ -57,6 +57,23 @@ module Redlock
       @servers.each { |s| s.unlock(lock_info[:resource], lock_info[:value]) }
     end
 
+    # Locks a resource, executing the received block only after successfully acquiring the lock,
+    # and returning its return value as a result.
+    # Params:
+    # +resource+:: the resource (or key) string to be locked.
+    # +ttl+:: the time-to-live in ms for the lock.
+    # +block+:: block to be executed after successful lock acquisition.
+    def with_lock(resource, ttl,  &block)
+      raise "No block passed" unless block
+
+      rv = nil
+      lock(resource, ttl) do |lock_info|
+        raise LockException, "Could not acquire lock #{resource}" unless lock_info
+        rv = block.call
+      end
+      rv
+    end
+
     private
 
     class RedisInstance
