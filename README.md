@@ -79,6 +79,18 @@ lock_manager.lock("resource_key", 2000) do |locked|
 end
 ```
 
+There's also a bang version that only executes the block if the lock is successfully acquired, returning the block's value as a result, or raising an exception otherwise:
+
+```ruby
+begin
+  block_result = lock_manager.lock!("resource_key", 2000) do
+    # critical code
+  end
+rescue Redlock::LockException
+  # error handling
+end
+```
+
 ## Run tests
 
 Make sure you have at least 1 redis instances up.
