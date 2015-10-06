@@ -64,13 +64,13 @@ module Redlock
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: the time-to-live in ms for the lock.
     # +block+:: block to be executed after successful lock acquisition.
-    def with_lock(resource, ttl,  &block)
-      raise "No block passed" unless block
+    def with_lock(resource, ttl)
+      fail "No block passed" unless block_given?
 
       rv = nil
       lock(resource, ttl) do |lock_info|
         raise LockException, "Could not acquire lock #{resource}" unless lock_info
-        rv = block.call
+        rv = yield
       end
       rv
     end
