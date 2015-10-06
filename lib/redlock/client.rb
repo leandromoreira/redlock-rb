@@ -34,7 +34,8 @@ module Redlock
     # Params:
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
-    # +block+:: an optional block that automatically unlocks the lock.
+    # +block+:: an optional block to be executed; after its execution, the lock (if successfully
+    # acquired) is automatically unlocked.
     def lock(resource, ttl, &block)
       lock_info = try_lock_instances(resource, ttl)
 
@@ -55,6 +56,23 @@ module Redlock
     # +lock_info+:: the lock that has been acquired when you locked the resource.
     def unlock(lock_info)
       @servers.each { |s| s.unlock(lock_info[:resource], lock_info[:value]) }
+    end
+
+    # Locks a resource, executing the received block only after successfully acquiring the lock,
+    # and returning its return value as a result.
+    # Params:
+    # +resource+:: the resource (or key) string to be locked.
+    # +ttl+:: the time-to-live in ms for the lock.
+    # +block+:: block to be executed after successful lock acquisition.
+    def lock!(resource, ttl)
+      fail "No block passed" unless block_given?
+
+      rv = nil
+      lock(resource, ttl) do |lock_info|
+        raise LockException, "Could not acquire lock #{resource}" unless lock_info
+        rv = yield
+      end
+      rv
     end
 
     private
