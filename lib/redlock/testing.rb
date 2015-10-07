@@ -25,13 +25,13 @@ module Redlock
     end
 
     class RedisInstance
+      alias_method :load_scripts_without_testing, :load_scripts
+
       def load_scripts
-        begin
-          @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
-          @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
-        rescue Redis::CommandError
-          # ignore
-        end
+        load_scripts_without_testing
+      rescue Redis::CommandError
+        # FakeRedis doesn't have #script, but doesn't need it either.
+        raise unless defined?(::FakeRedis)
       end
     end
   end
