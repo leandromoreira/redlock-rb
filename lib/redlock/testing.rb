@@ -4,17 +4,17 @@ module Redlock
 
     alias_method :try_lock_instances_without_testing, :try_lock_instances
 
-    def try_lock_instances(resource, ttl)
+    def try_lock_instances(resource, ttl, extend)
       if @testing_mode == :bypass
         {
           validity: ttl,
           resource: resource,
-          value: SecureRandom.uuid
+          value: extend ? extend.fetch(:value) : SecureRandom.uuid
         }
       elsif @testing_mode == :fail
         false
       else
-        try_lock_instances_without_testing resource, ttl
+        try_lock_instances_without_testing resource, ttl, extend
       end
     end
 
@@ -25,12 +25,13 @@ module Redlock
     end
 
     class RedisInstance
+      alias_method :load_scripts_without_testing, :load_scripts
+
       def load_scripts
-        begin
-          @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
-        rescue Redis::CommandError
-          # ignore
-        end
+        load_scripts_without_testing
+      rescue Redis::CommandError
+        # FakeRedis doesn't have #script, but doesn't need it either.
+        raise unless defined?(::FakeRedis)
       end
     end
   end
