@@ -111,15 +111,13 @@ RSpec.describe Redlock::Client do
   describe 'lock!' do
     context 'when lock is available' do
       it 'locks' do
-        lock_manager.lock!(resource_key, ttl) do |_|
+        lock_manager.lock!(resource_key, ttl) do
           expect(resource_key).to_not be_lockable(lock_manager, ttl)
         end
       end
 
       it "returns the received block's return value" do
-        rv = lock_manager.lock!(resource_key, ttl) do
-          :success
-        end
+        rv = lock_manager.lock!(resource_key, ttl) { :success }
         expect(rv).to eql(:success)
       end
 
@@ -138,21 +136,17 @@ RSpec.describe Redlock::Client do
       before { @another_lock_info = lock_manager.lock(resource_key, ttl) }
       after { lock_manager.unlock(@another_lock_info) }
 
-      it 'raises a LockException' do
-        expect { lock_manager.lock!(resource_key, ttl) {} }.to raise_error(Redlock::LockException)
+      it 'raises a LockError' do
+        expect { lock_manager.lock!(resource_key, ttl) {} }.to raise_error(Redlock::LockError)
       end
 
       it 'does not execute the block' do
-        block_ran = false
-
-        begin
-          lock_manager.lock!(resource_key, ttl) do
-            block_ran = true
+        expect do
+          begin
+            lock_manager.lock!(resource_key, ttl) { fail }
+          rescue Redlock::LockError
           end
-        rescue
-        end
-
-        expect(block_ran).to eql(false)
+        end.to_not raise_error
       end
     end
   end

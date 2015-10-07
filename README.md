@@ -95,7 +95,7 @@ end
 
 Make sure you have at least 1 redis instances up.
 
-   $ rspec
+    $ rspec
 
 ## Disclaimer
 

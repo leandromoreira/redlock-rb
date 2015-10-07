@@ -65,14 +65,12 @@ module Redlock
     # +ttl+:: the time-to-live in ms for the lock.
     # +block+:: block to be executed after successful lock acquisition.
     def lock!(resource, ttl)
-      fail "No block passed" unless block_given?
+      fail 'No block passed' unless block_given?
 
-      rv = nil
       lock(resource, ttl) do |lock_info|
-        raise LockException, "Could not acquire lock #{resource}" unless lock_info
-        rv = yield
+        raise LockError, "Could not acquire lock #{resource}" unless lock_info
+        return yield
       end
-      rv
     end
 
     private
@@ -146,7 +144,7 @@ module Redlock
       # Add 2 milliseconds to the drift to account for Redis expires
       # precision, which is 1 millisecond, plus 1 millisecond min drift
       # for small TTLs.
-      drift = (ttl * CLOCK_DRIFT_FACTOR).to_i + 2
+      (ttl * CLOCK_DRIFT_FACTOR).to_i + 2
     end
 
     def timed

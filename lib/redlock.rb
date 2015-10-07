@@ -3,5 +3,5 @@ require 'redlock/version'
 module Redlock
   autoload :Client, 'redlock/client'
 
-  class LockException < StandardError; end
+  LockError = Class.new(StandardError)
 end
