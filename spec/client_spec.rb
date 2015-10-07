@@ -49,7 +49,7 @@ RSpec.describe Redlock::Client do
         expect(@lock_info[:value]).to eq('hello world') # really we should test what's in redis
       end
 
-      it "doesn't extend lock by default" do
+      it "doesn't extend somebody else's lock" do
         @lock_info = lock_manager.lock(resource_key, ttl)
         second_attempt = lock_manager.lock(resource_key, ttl)
         expect(second_attempt).to eq(false)
