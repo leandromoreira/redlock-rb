@@ -61,15 +61,12 @@ module Redlock
 
     # Locks a resource, executing the received block only after successfully acquiring the lock,
     # and returning its return value as a result.
-    # Params:
-    # +resource+:: the resource (or key) string to be locked.
-    # +ttl+:: the time-to-live in ms for the lock.
-    # +block+:: block to be executed after successful lock acquisition.
-    def lock!(resource, ttl)
+    # See Redlock::Client#lock for parameters.
+    def lock!(*args, **keyword_args)
       fail 'No block passed' unless block_given?
 
-      lock(resource, ttl) do |lock_info|
-        raise LockError, "Could not acquire lock #{resource}" unless lock_info
+      lock(*args, **keyword_args) do |lock_info|
+        raise LockError, 'failed to acquire lock' unless lock_info
         return yield
       end
     end
