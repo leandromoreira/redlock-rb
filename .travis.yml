@@ -4,3 +4,5 @@ services:
 rvm:
   - "2.0.0"
 script: bundle exec rspec spec
+sudo: false
+cache: bundler
