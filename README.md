@@ -86,7 +86,7 @@ begin
   block_result = lock_manager.lock!("resource_key", 2000) do
     # critical code
   end
-rescue Redlock::LockException
+rescue Redlock::LockError
   # error handling
 end
 ```
