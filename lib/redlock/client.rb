@@ -101,8 +101,19 @@ module Redlock
         load_scripts
       end
 
-      def lock(resource, val, ttl)
+      def lock(resource, val, ttl, retry_on_noscript: true)
         @redis.evalsha(@lock_script_sha, keys: [resource], argv: [val, ttl])
+      rescue Redis::CommandError => e
+        # When somebody has flushed the Redis instance's script cache, we might
+        # want to reload our scripts. Only attempt this once, though, to avoid
+        # going into an infinite loop.
+        if e.message =~ /NOSCRIPT/ && retry_on_noscript
+          retry_on_noscript = false
+          load_scripts
+          retry
+        else
+          raise
+        end
       end
 
       def unlock(resource, val)
