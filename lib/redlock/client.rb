@@ -102,11 +102,15 @@ module Redlock
       end
 
       def lock(resource, val, ttl)
-        @redis.evalsha(@lock_script_sha, keys: [resource], argv: [val, ttl])
+        recover_from_script_flush do
+          @redis.evalsha @lock_script_sha, keys: [resource], argv: [val, ttl]
+        end
       end
 
       def unlock(resource, val)
-        @redis.evalsha(@unlock_script_sha, keys: [resource], argv: [val])
+        recover_from_script_flush do
+          @redis.evalsha @unlock_script_sha, keys: [resource], argv: [val]
+        end
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
       end
@@ -116,6 +120,19 @@ module Redlock
       def load_scripts
         @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
         @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
+      end
+
+      def recover_from_script_flush
+        tries = 0
+        yield
+      rescue Redis::CommandError
+        if $!.message.include?('NOSCRIPT') and tries == 0
+          load_scripts
+          tries += 1
+          retry
+        else
+          raise $!
+        end
       end
     end
 
