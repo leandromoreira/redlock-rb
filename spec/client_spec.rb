@@ -175,4 +175,25 @@ RSpec.describe Redlock::Client do
       end
     end
   end
+
+  describe 'after SCRIPT FLUSH' do
+    let(:server) { Redis.new }
+    it 'recovers lock function' do
+      lock_info = lock_manager.lock('a', ttl)
+      expect(lock_info).to be_lock_info_for('a')
+      server.script :flush
+      lock_info = lock_manager.lock('b', ttl)
+      expect(lock_info).to be_lock_info_for('b')
+    end
+
+    it 'recovers unlock function' do
+      lock_info = lock_manager.lock(resource_key, ttl)
+      lock_manager.unlock(lock_info)
+      expect(resource_key).to be_lockable(lock_manager, ttl)
+      server.script :flush
+      lock_info = lock_manager.lock(resource_key, ttl)
+      lock_manager.unlock(lock_info)
+      expect(resource_key).to be_lockable(lock_manager, ttl)
+    end
+  end
 end
