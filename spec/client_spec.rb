@@ -73,6 +73,43 @@ RSpec.describe Redlock::Client do
       end
     end
 
+    context 'when script cache has been flushed' do
+      before(:each) do
+        @manipulated_instance = lock_manager.instance_variable_get(:@servers).first
+        @manipulated_instance.instance_variable_get(:@redis).script(:flush)
+      end
+
+      it 'does not raise a Redis::CommandError: NOSCRIPT error' do
+        expect {
+          lock_manager.lock(resource_key, ttl)
+        }.to_not raise_error
+      end
+
+      it 'tries to load the scripts to cache again' do
+        expect(@manipulated_instance).to receive(:load_scripts).and_call_original
+        lock_manager.lock(resource_key, ttl)
+      end
+
+      context 'when the script re-loading fails' do
+        it 'does not try to to load the scripts to cache again twice' do
+          # This time we do not pass it through to Redis, in order to simulate a passing
+          # call to LOAD SCRIPT followed by another NOSCRIPT error. Imagine someone
+          # repeatedly calling SCRIPT FLUSH on our Redis instance.
+          expect(@manipulated_instance).to receive(:load_scripts)
+
+          expect {
+            lock_manager.lock(resource_key, ttl)
+          }.to raise_error(/NOSCRIPT/)
+        end
+      end
+
+      context 'when the script re-loading succeeds' do
+        it 'locks' do
+          expect(lock_manager.lock(resource_key, ttl)).to be_lock_info_for(resource_key)
+        end
+      end
+    end
+
     describe 'block syntax' do
       context 'when lock is available' do
         it 'locks' do
