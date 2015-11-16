@@ -122,18 +122,21 @@ module Redlock
         @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
       end
 
-      def recover_from_script_flush(tries: 0)
-        yield
-      rescue Redis::CommandError => e
-        # When somebody has flushed the Redis instance's script cache, we might
-        # want to reload our scripts. Only attempt this once, though, to avoid
-        # going into an infinite loop.
-        if e.message.include?('NOSCRIPT') && tries.zero?
-          load_scripts
-          tries += 1
-          retry
-        else
-          raise
+      def recover_from_script_flush
+        retry_on_noscript = true
+        begin
+          yield
+        rescue Redis::CommandError => e
+          # When somebody has flushed the Redis instance's script cache, we might
+          # want to reload our scripts. Only attempt this once, though, to avoid
+          # going into an infinite loop.
+          if retry_on_noscript && e.message.include?('NOSCRIPT')
+            load_scripts
+            retry_on_noscript = false
+            retry
+          else
+            raise
+          end
         end
       end
     end
