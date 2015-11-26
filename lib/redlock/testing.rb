@@ -32,6 +32,8 @@ module Redlock
       rescue Redis::CommandError
         # FakeRedis doesn't have #script, but doesn't need it either.
         raise unless defined?(::FakeRedis)
+      rescue NoMethodError
+        raise unless defined?(::MockRedis)
       end
     end
   end
