@@ -19,6 +19,10 @@
 
 This is an implementation of a proposed [distributed lock algorithm with Redis](http://redis.io/topics/distlock). It started as a fork from [antirez implementation.](https://github.com/antirez/redlock-rb)
 
+## Compatibility
+
+Redlock works with Redis versions 2.6 or later.
+
 ## Installation
 
 Add this line to your application's Gemfile:
