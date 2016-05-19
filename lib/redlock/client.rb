@@ -52,6 +52,30 @@ module Redlock
       end
     end
 
+    def extend_life(to_extend, ttl)
+      value = to_extend.fetch(:value)
+      resource = to_extend.fetch(:resource)
+
+
+      extended, time_elapsed = timed do
+        @servers.all? { |s| s.extend_life(resource, value, ttl) }
+      end
+
+      validity = ttl - time_elapsed - drift(ttl)
+
+      if extended
+        { validity: validity, resource: resource, value: value }
+      else
+        @servers.each { |s| s.unlock(resource, value) }
+        false
+      end
+    end
+
+    def extend_life!(to_extend, ttl)
+      new_lock_info = self.extend_life(to_extend, ttl)
+      raise LockError, 'failed to extend lock' unless new_lock_info
+    end
+
     # Unlocks a resource.
     # Params:
     # +lock_info+:: the lock that has been acquired when you locked the resource.
@@ -91,6 +115,16 @@ module Redlock
         end
       eos
 
+      EXTEND_LOCK_SCRIPT = <<-eos
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+          redis.call("expire", KEYS[1], ARGV[2])
+          return 0
+        else
+          return 1
+        end
+      eos
+
+
       def initialize(connection)
         if connection.respond_to?(:client)
           @redis = connection
@@ -107,6 +141,13 @@ module Redlock
         end
       end
 
+      def extend_life(resource, val, ttl)
+        recover_from_script_flush do
+          rc = @redis.evalsha @extend_lock_script_sha, keys: [resource], argv: [val, ttl]
+          rc == 0
+        end
+      end
+
       def unlock(resource, val)
         recover_from_script_flush do
           @redis.evalsha @unlock_script_sha, keys: [resource], argv: [val]
@@ -120,6 +161,7 @@ module Redlock
       def load_scripts
         @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
         @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
+        @extend_lock_script_sha = @redis.script(:load, EXTEND_LOCK_SCRIPT)
       end
 
       def recover_from_script_flush
