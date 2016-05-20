@@ -52,6 +52,10 @@ module Redlock
       end
     end
 
+    # Extends the given lock for a given time. Returns true on success.
+    # Params:
+    # +to_extend+:: A lock ("lock_info") to extend.
+    # +ttl+:: The time-to-live in ms for the lock.
     def extend_life(to_extend, ttl)
       value = to_extend.fetch(:value)
       resource = to_extend.fetch(:resource)
@@ -71,6 +75,10 @@ module Redlock
       end
     end
 
+    # Extends the given lock for a given time. Raises LockError on failure
+    # Params:
+    # +to_extend+:: A lock ("lock_info") to extend.
+    # +ttl+:: The time-to-live in ms for the lock.
     def extend_life!(to_extend, ttl)
       new_lock_info = self.extend_life(to_extend, ttl)
       raise LockError, 'failed to extend lock' unless new_lock_info
