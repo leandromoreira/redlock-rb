@@ -226,6 +226,11 @@ RSpec.describe Redlock::Client do
         lock_manager.lock!(resource_key, ttl) { fail } rescue nil
         expect(resource_key).to be_lockable(lock_manager, ttl)
       end
+
+      it 'passes the extension parameter' do
+        my_lock_info = lock_manager.lock(resource_key, ttl)
+        expect{ lock_manager.lock!(resource_key, ttl, extend: my_lock_info){} }.to_not raise_error
+      end
     end
 
     context 'when lock is not available' do
