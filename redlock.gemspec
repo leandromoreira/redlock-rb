@@ -18,10 +18,10 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency 'redis', '~> 3', '>= 3.3.0'
+  spec.add_dependency 'redis', '~> 3', '>= 3.0.0'
 
   spec.add_development_dependency 'bundler', '~> 1.12', '>= 1.12.3'
   spec.add_development_dependency "coveralls", "~> 0.8.13"
   spec.add_development_dependency 'rake', '~> 11.1', '>= 11.1.2'
-  spec.add_development_dependency 'rspec', '~> 3.4', '>= 3.4.0'
+  spec.add_development_dependency 'rspec', '~> 3', '>= 3.0.0'
 end

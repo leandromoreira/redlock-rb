@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     redlock (0.1.7)
-      redis (~> 3, >= 3.3.0)
+      redis (~> 3, >= 3.0.0)
 
 GEM
   remote: https://rubygems.org/
@@ -49,7 +49,7 @@ DEPENDENCIES
   coveralls (~> 0.8.13)
   rake (~> 11.1, >= 11.1.2)
   redlock!
-  rspec (~> 3.4, >= 3.4.0)
+  rspec (~> 3, >= 3.0.0)
 
 BUNDLED WITH
    1.12.3
