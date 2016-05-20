@@ -95,6 +95,22 @@ rescue Redlock::LockError
 end
 ```
 
+To extend the life of the lock, provided that you didn't let it expire:
+
+```ruby
+begin
+  block_result = lock_manager.lock!("resource_key", 2000) do |lock_info|
+    # critical code
+    lock_manager.extend_life!(lock_info, 3000)
+    # more critical code
+  end
+rescue Redlock::LockError
+  # error handling
+end
+```
+There's also a non-bang version that returns true when the lock was
+extended
+
 ## Run tests
 
 Make sure you have at least 1 redis instances up.

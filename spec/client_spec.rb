@@ -170,6 +170,40 @@ RSpec.describe Redlock::Client do
     end
   end
 
+  describe "extend" do
+    context 'when lock is available' do
+      before { @lock_info = lock_manager.lock(resource_key, ttl) }
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'can extend its own lock' do
+        lock_info = lock_manager.extend_life(@lock_info, ttl)
+        expect(lock_info).to be_lock_info_for(resource_key)
+      end
+
+      it "can't extend a nonexistent lock" do
+        lock_manager.unlock(@lock_info)
+        lock_info = lock_manager.extend_life(@lock_info, ttl)
+        expect(lock_info).to eq(false)
+      end
+    end
+  end
+
+  describe "extend!" do
+    context 'when lock is available' do
+      before { @lock_info = lock_manager.lock(resource_key, ttl) }
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'can extend its own lock' do
+        expect{ lock_manager.extend_life!(@lock_info, ttl) }.to_not raise_error
+      end
+
+      it "can't extend a nonexistent lock" do
+        lock_manager.unlock(@lock_info)
+        expect{ lock_manager.extend_life!(@lock_info, ttl) }.to raise_error(Redlock::LockError)
+      end
+    end
+  end
+
   describe 'lock!' do
     context 'when lock is available' do
       it 'locks' do
