@@ -3,7 +3,7 @@ require 'coveralls'
 Coveralls.wear!
 require 'redlock'
 
-LOCK_INFO_KEYS = %i{validity resource value}
+LOCK_INFO_KEYS = [:validity, :resource, :value]
 
 RSpec::Matchers.define :be_lock_info_for do |resource|
   def correct_type?(actual)

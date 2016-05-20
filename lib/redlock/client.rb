@@ -37,7 +37,8 @@ module Redlock
     # +extend+: A lock ("lock_info") to extend.
     # +block+:: an optional block to be executed; after its execution, the lock (if successfully
     # acquired) is automatically unlocked.
-    def lock(resource, ttl, extend: nil, &block)
+    def lock(resource, ttl, options={}, &block)
+      extend = options[:extend] || nil
       lock_info = try_lock_instances(resource, ttl, extend)
 
       if block_given?
@@ -86,10 +87,10 @@ module Redlock
     # Locks a resource, executing the received block only after successfully acquiring the lock,
     # and returning its return value as a result.
     # See Redlock::Client#lock for parameters.
-    def lock!(*args, **keyword_args)
+    def lock!(*args)
       fail 'No block passed' unless block_given?
 
-      lock(*args, **keyword_args) do |lock_info|
+      lock(*args) do |lock_info|
         raise LockError, 'failed to acquire lock' unless lock_info
         return yield
       end
