@@ -4,17 +4,17 @@ module Redlock
 
     alias_method :try_lock_instances_without_testing, :try_lock_instances
 
-    def try_lock_instances(resource, ttl, extend)
+    def try_lock_instances(resource, ttl, options)
       if @testing_mode == :bypass
         {
           validity: ttl,
           resource: resource,
-          value: extend ? extend.fetch(:value) : SecureRandom.uuid
+          value: options[:extend] ? options[:extend].fetch(:value) : SecureRandom.uuid
         }
       elsif @testing_mode == :fail
         false
       else
-        try_lock_instances_without_testing resource, ttl, extend
+        try_lock_instances_without_testing resource, ttl, options
       end
     end
 

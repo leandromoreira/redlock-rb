@@ -37,9 +37,8 @@ module Redlock
     # +extend+: A lock ("lock_info") to extend.
     # +block+:: an optional block to be executed; after its execution, the lock (if successfully
     # acquired) is automatically unlocked.
-    def lock(resource, ttl, options={}, &block)
-      extend = options[:extend] || nil
-      lock_info = try_lock_instances(resource, ttl, extend)
+    def lock(resource, ttl, options = {}, &block)
+      lock_info = try_lock_instances(resource, ttl, options)
 
       if block_given?
         begin
@@ -51,38 +50,6 @@ module Redlock
       else
         lock_info
       end
-    end
-
-    # Extends the given lock for a given time. Returns true on success.
-    # Params:
-    # +to_extend+:: A lock ("lock_info") to extend.
-    # +ttl+:: The time-to-live in ms for the lock.
-    def extend_life(to_extend, ttl)
-      value = to_extend.fetch(:value)
-      resource = to_extend.fetch(:resource)
-
-
-      extended, time_elapsed = timed do
-        @servers.all? { |s| s.extend_life(resource, value, ttl) }
-      end
-
-      validity = ttl - time_elapsed - drift(ttl)
-
-      if extended
-        { validity: validity, resource: resource, value: value }
-      else
-        @servers.each { |s| s.unlock(resource, value) }
-        false
-      end
-    end
-
-    # Extends the given lock for a given time. Raises LockError on failure
-    # Params:
-    # +to_extend+:: A lock ("lock_info") to extend.
-    # +ttl+:: The time-to-live in ms for the lock.
-    def extend_life!(to_extend, ttl)
-      new_lock_info = self.extend_life(to_extend, ttl)
-      raise LockError, 'failed to extend lock' unless new_lock_info
     end
 
     # Unlocks a resource.
@@ -124,7 +91,7 @@ module Redlock
         end
       eos
 
-      EXTEND_LOCK_SCRIPT = <<-eos
+      EXTEND_LIFE_SCRIPT = <<-eos
         if redis.call("get", KEYS[1]) == ARGV[1] then
           redis.call("expire", KEYS[1], ARGV[2])
           return 0
@@ -132,7 +99,6 @@ module Redlock
           return 1
         end
       eos
-
 
       def initialize(connection)
         if connection.respond_to?(:client)
@@ -150,9 +116,9 @@ module Redlock
         end
       end
 
-      def extend_life(resource, val, ttl)
+      def extend(resource, val, ttl)
         recover_from_script_flush do
-          rc = @redis.evalsha @extend_lock_script_sha, keys: [resource], argv: [val, ttl]
+          rc = @redis.evalsha @extend_life_script_sha, keys: [resource], argv: [val, ttl]
           rc == 0
         end
       end
@@ -170,7 +136,7 @@ module Redlock
       def load_scripts
         @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
         @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
-        @extend_lock_script_sha = @redis.script(:load, EXTEND_LOCK_SCRIPT)
+        @extend_life_script_sha = @redis.script(:load, EXTEND_LIFE_SCRIPT)
       end
 
       def recover_from_script_flush
@@ -192,9 +158,11 @@ module Redlock
       end
     end
 
-    def try_lock_instances(resource, ttl, extend)
-      @retry_count.times do
-        lock_info = lock_instances(resource, ttl, extend)
+    def try_lock_instances(resource, ttl, options)
+      tries = options[:extend] ? 1 : @retry_count
+
+      tries.times do
+        lock_info = lock_instances(resource, ttl, options)
         return lock_info if lock_info
 
         # Wait a random delay before retrying
@@ -204,11 +172,12 @@ module Redlock
       false
     end
 
-    def lock_instances(resource, ttl, extend)
-      value = extend ? extend.fetch(:value) : SecureRandom.uuid
+    def lock_instances(resource, ttl, options)
+      value  = options[:extend] ? options[:extend].fetch(:value) : SecureRandom.uuid
+      method = options[:extend_life] ? :extend : :lock
 
       locked, time_elapsed = timed do
-        @servers.select { |s| s.lock(resource, value, ttl) }.size
+        @servers.select { |s| s.send(method, resource, value, ttl) }.size
       end
 
       validity = ttl - time_elapsed - drift(ttl)
