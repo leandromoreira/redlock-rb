@@ -95,21 +95,34 @@ rescue Redlock::LockError
 end
 ```
 
-To extend the life of the lock, provided that you didn't let it expire:
+To extend the life of the lock:
 
 ```ruby
 begin
   block_result = lock_manager.lock!("resource_key", 2000) do |lock_info|
     # critical code
-    lock_manager.extend_life!(lock_info, 3000)
+    lock_manager.lock("resource key", 3000, extend: lock_info)
     # more critical code
   end
 rescue Redlock::LockError
   # error handling
 end
 ```
-There's also a non-bang version that returns true when the lock was
-extended
+
+The above code will also acquire the lock if the previous lock has expired and the lock is currently free. Keep in mind that this means the lock could have been acquired by someone else in the meantime. To only extend the life of the lock if currently locked by yourself, use `extend_life` parameter:
+
+```ruby
+begin
+  block_result = lock_manager.lock!("resource_key", 2000) do |lock_info|
+    # critical code
+    lock_manager.lock("resource key", 3000, extend: lock_info, extend_life: true)
+    # more critical code, only if lock was still hold
+  end
+rescue Redlock::LockError
+  # error handling
+end
+```
+
 
 ## Run tests
 
