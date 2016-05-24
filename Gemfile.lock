@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    redlock (0.1.7)
+    redlock (0.1.8)
       redis (~> 3, >= 3.0.0)
 
 GEM
@@ -49,6 +49,3 @@ DEPENDENCIES
   rake (~> 11.1, >= 11.1.2)
   redlock!
   rspec (~> 3, >= 3.0.0)
-
-BUNDLED WITH
-   1.12.1
