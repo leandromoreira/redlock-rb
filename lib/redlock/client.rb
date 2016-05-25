@@ -34,7 +34,9 @@ module Redlock
     # Params:
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
-    # +extend+: A lock ("lock_info") to extend.
+    # +options+:: Hash of optional parameters
+    #  * +extend+: A lock ("lock_info") to extend.
+    #  * +extend_only_if_life+: If +extend+ is given, only acquire lock if currently held
     # +block+:: an optional block to be executed; after its execution, the lock (if successfully
     # acquired) is automatically unlocked.
     def lock(resource, ttl, options = {}, &block)
@@ -86,17 +88,8 @@ module Redlock
       # also https://github.com/sbertrang/redis-distlock/issues/2 which proposes the value-checking
       # and @maltoe for https://github.com/leandromoreira/redlock-rb/pull/20#discussion_r38903633
       LOCK_SCRIPT = <<-eos
-        if redis.call("exists", KEYS[1]) == 0 or redis.call("get", KEYS[1]) == ARGV[1] then
+        if (redis.call("exists", KEYS[1]) == 0 and ARGV[3] == "yes") or redis.call("get", KEYS[1]) == ARGV[1] then
           return redis.call("set", KEYS[1], ARGV[1], "PX", ARGV[2])
-        end
-      eos
-
-      EXTEND_LIFE_SCRIPT = <<-eos
-        if redis.call("get", KEYS[1]) == ARGV[1] then
-          redis.call("expire", KEYS[1], ARGV[2])
-          return 0
-        else
-          return 1
         end
       eos
 
@@ -104,22 +97,15 @@ module Redlock
         if connection.respond_to?(:client)
           @redis = connection
         else
-          @redis  = Redis.new(connection)
+          @redis = Redis.new(connection)
         end
 
         load_scripts
       end
 
-      def lock(resource, val, ttl)
+      def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.evalsha @lock_script_sha, keys: [resource], argv: [val, ttl]
-        end
-      end
-
-      def extend(resource, val, ttl)
-        recover_from_script_flush do
-          rc = @redis.evalsha @extend_life_script_sha, keys: [resource], argv: [val, ttl]
-          rc == 0
+          @redis.evalsha @lock_script_sha, keys: [resource], argv: [val, ttl, allow_new_lock]
         end
       end
 
@@ -136,7 +122,6 @@ module Redlock
       def load_scripts
         @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
         @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
-        @extend_life_script_sha = @redis.script(:load, EXTEND_LIFE_SCRIPT)
       end
 
       def recover_from_script_flush
@@ -173,11 +158,11 @@ module Redlock
     end
 
     def lock_instances(resource, ttl, options)
-      value  = options[:extend] ? options[:extend].fetch(:value) : SecureRandom.uuid
-      method = options[:extend_life] ? :extend : :lock
+      value = options.fetch(:extend, { value: SecureRandom.uuid })[:value]
+      allow_new_lock = (options[:extend_life] || options[:extend_only_if_life]) ? 'no' : 'yes'
 
       locked, time_elapsed = timed do
-        @servers.select { |s| s.send(method, resource, value, ttl) }.size
+        @servers.select { |s| s.lock resource, value, ttl, allow_new_lock }.size
       end
 
       validity = ttl - time_elapsed - drift(ttl)

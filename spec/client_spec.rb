@@ -43,16 +43,16 @@ RSpec.describe Redlock::Client do
         expect(@lock_info[:value]).to eq(my_lock_info[:value])
       end
 
-      context 'when extend_life flag is given' do
+      context 'when extend_only_if_life flag is given' do
         it 'does not extend a non-existent lock' do
-          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_life: true)
+          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_life: true)
           expect(@lock_info).to eq(false)
         end
       end
 
-      context 'when extend_life flag is not given' do
+      context 'when extend_only_if_life flag is not given' do
         it "sets the given value when trying to extend a non-existent lock" do
-          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_life: false)
+          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_life: false)
           expect(@lock_info).to be_lock_info_for(resource_key)
           expect(@lock_info[:value]).to eq('hello world') # really we should test what's in redis
         end
