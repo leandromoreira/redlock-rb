@@ -1,9 +1,11 @@
 require 'spec_helper'
 require 'securerandom'
+require 'redis'
 
 RSpec.describe Redlock::Client do
   # It is recommended to have at least 3 servers in production
   let(:lock_manager) { Redlock::Client.new }
+  let(:redis_client) { Redis.new }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
 
@@ -35,6 +37,14 @@ RSpec.describe Redlock::Client do
 
         expect(@lock_info).to be_lock_info_for(resource_key)
       end
+      
+      it 'interprets lock time as milliseconds' do
+        # use a hardcoded value to avoid global change since this test is 
+        # fairly dependent on that value
+        ttl = 2000
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        expect(redis_client.pttl(resource_key)).to be_within(50).of(ttl)
+      end
 
       it 'can extend its own lock' do
         my_lock_info = lock_manager.lock(resource_key, ttl)
@@ -47,6 +57,33 @@ RSpec.describe Redlock::Client do
         it 'does not extend a non-existent lock' do
           @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_life: true)
           expect(@lock_info).to eq(false)
+        end
+        
+        context 'on an existent lock' do
+          let!(:existent_lock) do
+            lock_info = lock_manager.lock(resource_key, ttl)
+            expect(resource_key).to_not be_lockable(lock_manager, ttl)
+            lock_info
+          end
+          
+          it 'interprets lock time in milliseconds' do
+            # use a hardcoded value to avoid global change since this test is 
+            # fairly dependent on that value
+            ttl = 20000
+            @lock_info = lock_manager.lock(resource_key, ttl, extend: existent_lock, extend_life: true)
+            expect(redis_client.pttl(resource_key)).to be_within(50).of(ttl)
+          end
+          
+          it 'reset the TTL, rather than adding extra time to it' do
+            ttl = 2000
+            lock_info = existent_lock
+            # if we extend more than once, the TTL is reset at each call
+            50.times do
+              lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_life: true)
+              expect(lock_info).not_to be_nil
+              expect(redis_client.pttl(resource_key)).to be_within(50).of(ttl)
+            end
+          end
         end
       end
 
