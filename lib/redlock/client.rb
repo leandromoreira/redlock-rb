@@ -151,7 +151,7 @@ module Redlock
         return lock_info if lock_info
 
         # Wait a random delay before retrying
-        sleep(rand(@retry_delay).to_f / 1000)
+        sleep(rand(@retry_delay).to_f / 1000) if tries > 1
       end
 
       false

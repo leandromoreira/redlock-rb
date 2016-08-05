@@ -80,6 +80,29 @@ RSpec.describe Redlock::Client do
         lock_info = lock_manager.lock(resource_key, ttl, extend: yet_another_lock_info)
         expect(lock_info).to eql(false)
       end
+
+      context 'sleep at every try' do
+        let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS,
+                                                  { retry_count: retry_count }) }
+
+        context "retry_count > 1" do
+          let(:retry_count) { 2 }
+
+          it 'should sleep every try' do
+            expect(lock_manager).to receive(:sleep).twice.and_call_original
+            @lock_info = lock_manager.lock(resource_key, ttl)
+          end
+        end
+
+        context "retry_count = 1" do
+          let(:retry_count) { 1 }
+
+          it 'should not sleep' do
+            expect(lock_manager).not_to receive(:sleep)
+            @lock_info = lock_manager.lock(resource_key, ttl)
+          end
+        end
+      end
     end
 
     context 'when script cache has been flushed' do
