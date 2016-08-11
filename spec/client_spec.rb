@@ -85,11 +85,20 @@ RSpec.describe Redlock::Client do
         let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS,
                                                   { retry_count: retry_count }) }
 
-        context "retry_count > 1" do
-          let(:retry_count) { 2 }
+        context "retry_count > 2" do
+          let(:retry_count) { 3 }
 
           it 'should sleep every try' do
             expect(lock_manager).to receive(:sleep).twice.and_call_original
+            @lock_info = lock_manager.lock(resource_key, ttl)
+          end
+        end
+
+        context "retry_count = 2" do
+          let(:retry_count) { 2 }
+
+          it 'should sleep every try' do
+            expect(lock_manager).to receive(:sleep).once.and_call_original
             @lock_info = lock_manager.lock(resource_key, ttl)
           end
         end
