@@ -146,12 +146,13 @@ module Redlock
     def try_lock_instances(resource, ttl, options)
       tries = options[:extend] ? 1 : @retry_count
 
-      tries.times do
+      tries.times do |attempt_number|
         lock_info = lock_instances(resource, ttl, options)
         return lock_info if lock_info
 
         # Wait a random delay before retrying
-        sleep(rand(@retry_delay).to_f / 1000)
+        # And don't wait if it's last try
+        sleep(rand(@retry_delay).to_f / 1000) unless (attempt_number + 1) == tries
       end
 
       false
