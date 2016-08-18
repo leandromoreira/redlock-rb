@@ -3,7 +3,8 @@ require 'securerandom'
 
 RSpec.describe Redlock::Client do
   # It is recommended to have at least 3 servers in production
-  let(:lock_manager) { Redlock::Client.new }
+  let(:lock_manager_opts) { { retry_count: 3 } }
+  let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS, lock_manager_opts) }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
 
@@ -81,36 +82,15 @@ RSpec.describe Redlock::Client do
         expect(lock_info).to eql(false)
       end
 
-      context 'sleep at every try' do
-        let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS,
-                                                  { retry_count: retry_count }) }
+      it 'retries up to \'retry_count\' times' do
+        expect(lock_manager).to receive(:lock_instances).exactly(
+          lock_manager_opts[:retry_count]).times.and_return(false)
+        lock_manager.lock(resource_key, ttl)
+      end
 
-        context "retry_count > 2" do
-          let(:retry_count) { 3 }
-
-          it 'should sleep every try' do
-            expect(lock_manager).to receive(:sleep).twice.and_call_original
-            @lock_info = lock_manager.lock(resource_key, ttl)
-          end
-        end
-
-        context "retry_count = 2" do
-          let(:retry_count) { 2 }
-
-          it 'should sleep every try' do
-            expect(lock_manager).to receive(:sleep).once.and_call_original
-            @lock_info = lock_manager.lock(resource_key, ttl)
-          end
-        end
-
-        context "retry_count = 1" do
-          let(:retry_count) { 1 }
-
-          it 'should not sleep' do
-            expect(lock_manager).not_to receive(:sleep)
-            @lock_info = lock_manager.lock(resource_key, ttl)
-          end
-        end
+      it 'sleeps in between retries' do
+        expect(lock_manager).to receive(:sleep).exactly(lock_manager_opts[:retry_count] - 1).times
+        lock_manager.lock(resource_key, ttl)
       end
     end
 
