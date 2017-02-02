@@ -92,6 +92,22 @@ RSpec.describe Redlock::Client do
         expect(lock_manager).to receive(:sleep).exactly(lock_manager_opts[:retry_count] - 1).times
         lock_manager.lock(resource_key, ttl)
       end
+
+      it 'sleeps at least the specified retry_delay in milliseconds' do
+        expected_minimum = described_class::DEFAULT_RETRY_DELAY
+        expect(lock_manager).to receive(:sleep) do |sleep|
+          expect(sleep).to satisfy { |value| value >= expected_minimum / 1000.to_f }
+        end.at_least(:once)
+        lock_manager.lock(resource_key, ttl)
+      end
+
+      it 'sleeps a maximum of retry_delay + retry_jitter in milliseconds' do
+        expected_maximum = described_class::DEFAULT_RETRY_DELAY + described_class::DEFAULT_RETRY_JITTER
+        expect(lock_manager).to receive(:sleep) do |sleep|
+          expect(sleep).to satisfy { |value| value < expected_maximum / 1000.to_f }
+        end.at_least(:once)
+        lock_manager.lock(resource_key, ttl)
+      end
     end
 
     context 'when script cache has been flushed' do

@@ -121,6 +121,20 @@ rescue Redlock::LockError
 end
 ```
 
+It's possible to customize the retry logic providing the following options:
+
+```ruby
+  lock_manager = Redlock::Client.new(
+                  servers, {
+                  retry_count:   3,
+                  retry_delay:   200, # milliseconds
+                  retry_jitter:  50,  # milliseconds
+                  retry_timeout: 0.1  # seconds
+                 })
+```
+
+For more information you can check [documentation](https://github.com/leandromoreira/redlock-rb/blob/master/lib/redlock/client.rb#L13-L20)
+
 
 ## Run tests
 

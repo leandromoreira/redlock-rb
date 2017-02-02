@@ -7,14 +7,16 @@ module Redlock
     DEFAULT_REDIS_TIMEOUT = 0.1
     DEFAULT_RETRY_COUNT   = 3
     DEFAULT_RETRY_DELAY   = 200
+    DEFAULT_RETRY_JITTER  = 50
     CLOCK_DRIFT_FACTOR    = 0.01
 
     # Create a distributed lock manager implementing redlock algorithm.
     # Params:
     # +servers+:: The array of redis connection URLs or Redis connection instances. Or a mix of both.
-    # +options+:: You can override the default value for `retry_count` and `retry_delay`.
+    # +options+:: You can override the default value for `retry_count`, `retry_delay` and `retry_gitter`.
     #    * `retry_count`   being how many times it'll try to lock a resource (default: 3)
     #    * `retry_delay`   being how many ms to sleep before try to lock again (default: 200)
+    #    * `retry_jitter`  being how many ms to jitter retry delay (default: 50)
     #    * `redis_timeout` being how the Redis timeout will be set in seconds (default: 0.1)
     def initialize(servers = DEFAULT_REDIS_URLS, options = {})
       redis_timeout = options[:redis_timeout] || DEFAULT_REDIS_TIMEOUT
@@ -28,6 +30,7 @@ module Redlock
       @quorum = servers.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
+      @retry_jitter = options[:retry_jitter] || DEFAULT_RETRY_JITTER
     end
 
     # Locks a resource for a given time.
@@ -148,7 +151,7 @@ module Redlock
 
       tries.times do |attempt_number|
         # Wait a random delay before retrying.
-        sleep(rand(@retry_delay).to_f / 1000) if attempt_number > 0
+        sleep((@retry_delay + rand(@retry_jitter)).to_f / 1000) if attempt_number > 0
 
         lock_info = lock_instances(resource, ttl, options)
         return lock_info if lock_info
