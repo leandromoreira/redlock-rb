@@ -3,7 +3,9 @@ require 'securerandom'
 
 module Redlock
   class Client
-    DEFAULT_REDIS_URLS    = ['redis://localhost:6379']
+    DEFAULT_REDIS_HOST    = ENV["DEFAULT_REDIS_HOST"] || "localhost"
+    DEFAULT_REDIS_PORT    = ENV["DEFAULT_REDIS_PORT"] || "6379"
+    DEFAULT_REDIS_URLS    = ["redis://#{DEFAULT_REDIS_HOST}:#{DEFAULT_REDIS_PORT}"]
     DEFAULT_REDIS_TIMEOUT = 0.1
     DEFAULT_RETRY_COUNT   = 3
     DEFAULT_RETRY_DELAY   = 200

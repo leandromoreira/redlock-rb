@@ -1,0 +1,27 @@
+version: '2'
+services:
+  test:
+    image: ruby
+    volumes:
+      - .:/redlock
+    working_dir: /redlock
+    command: bash -c "bundle install && rspec"
+    environment:
+      - REDIS1_HOST=redis1.local.com
+      - REDIS1_PORT=6379
+      - REDIS2_HOST=redis2.local.com
+      - REDIS2_PORT=6379
+      - DEFAULT_REDIS_HOST=redis1.local.com
+      - DEFAULT_REDIS_PORT=6379
+    links:
+      - redis1:redis1.local.com
+      - redis2:redis2.local.com
+    depends_on:
+      - redis1
+      - redis2
+
+  redis1:
+    image: redis
+  redis2:
+    image: redis
+
