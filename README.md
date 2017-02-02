@@ -138,9 +138,9 @@ For more information you can check [documentation](https://github.com/leandromor
 
 ## Run tests
 
-Make sure you have at least 1 redis instances up.
+Make sure you have [docker installed](https://docs.docker.com/engine/installation/).
 
-    $ rspec
+    $ make
 
 ## Disclaimer
 

@@ -7,17 +7,22 @@ RSpec.describe Redlock::Client do
   let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS, lock_manager_opts) }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
+  let(:redis1_host) { ENV["REDIS1_HOST"] || "localhost" }
+  let(:redis1_port) { ENV["REDIS1_PORT"] || "6379" }
+  let(:redis2_host) { ENV["REDIS2_HOST"] || "127.0.0.1" }
+  let(:redis2_port) { ENV["REDIS2_PORT"] || "6379" }
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
-      servers = [ 'redis://localhost:6379', Redis.new(url: 'redis://127.0.0.1:6379') ]
+      print redis1_host
+      servers = [ "redis://#{redis1_host}:#{redis1_port}", Redis.new(url: "redis://#{redis2_host}:#{redis2_port}") ]
       redlock = Redlock::Client.new(servers)
 
       redlock_servers = redlock.instance_variable_get(:@servers).map do |s|
         s.instance_variable_get(:@redis).client.host
       end
 
-      expect(redlock_servers).to match_array(%w{ localhost 127.0.0.1 })
+      expect(redlock_servers).to match_array([redis1_host, redis2_host])
     end
   end
 
