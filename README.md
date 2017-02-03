@@ -144,7 +144,7 @@ Make sure you have [docker installed](https://docs.docker.com/engine/installatio
 
 ## Disclaimer
 
-This code implements an algorithm which is currently a proposal, it was not formally analyzed. Make sure to understand how it works before using it in your production environments. You can see discussion about this approach at [reddit](http://www.reddit.com/r/programming/comments/2nt0nq/distributed_lock_using_redis_implemented_in_ruby/).
+This code implements an algorithm which is currently a proposal, it was not formally analyzed. Make sure to understand how it works before using it in your production environments. You can see discussion about this approach at [reddit](http://www.reddit.com/r/programming/comments/2nt0nq/distributed_lock_using_redis_implemented_in_ruby/) and also the [Antirez answers](http://antirez.com/news/101) for some critics.
 
 ## Contributing
 
