@@ -129,7 +129,7 @@ It's possible to customize the retry logic providing the following options:
                   retry_count:   3,
                   retry_delay:   200, # milliseconds
                   retry_jitter:  50,  # milliseconds
-                  retry_timeout: 0.1  # seconds
+                  redis_timeout: 0.1  # seconds
                  })
 ```
 
