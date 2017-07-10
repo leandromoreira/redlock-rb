@@ -29,7 +29,7 @@ module Redlock
           RedisInstance.new(server)
         end
       end
-      @quorum = servers.length / 2 + 1
+      @quorum = (servers.length / 2).to_i + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
       @retry_jitter = options[:retry_jitter] || DEFAULT_RETRY_JITTER
