@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     redlock (0.2.0)
-      redis (~> 3, >= 3.0.0)
+      redis (>= 3.0.0, < 5.0)
 
 GEM
   remote: https://rubygems.org/
@@ -17,7 +17,7 @@ GEM
     docile (1.1.5)
     json (2.0.3)
     rake (11.3.0)
-    redis (3.3.3)
+    redis (4.0.1)
     rspec (3.5.0)
       rspec-core (~> 3.5.0)
       rspec-expectations (~> 3.5.0)
@@ -51,4 +51,4 @@ DEPENDENCIES
   rspec (~> 3, >= 3.0.0)
 
 BUNDLED WITH
-   1.12.5
+   1.16.0
