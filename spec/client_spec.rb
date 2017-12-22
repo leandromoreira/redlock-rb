@@ -49,6 +49,14 @@ RSpec.describe Redlock::Client do
         expect(@lock_info[:value]).to eq(my_lock_info[:value])
       end
 
+      context 'when extend param is nil' do
+        it 'defaults to creating a new lock' do
+          @lock_info = lock_manager.lock(resource_key, ttl, extend: nil)
+          expect(@lock_info).to be_lock_info_for(resource_key)
+          expect(@lock_info[:value]).to be
+        end
+      end
+
       context 'when extend_only_if_life flag is given' do
         it 'does not extend a non-existent lock' do
           @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_life: true)

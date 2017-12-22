@@ -163,7 +163,7 @@ module Redlock
     end
 
     def lock_instances(resource, ttl, options)
-      value = options.fetch(:extend, { value: SecureRandom.uuid })[:value]
+      value = (options[:extend] || { value: SecureRandom.uuid })[:value]
       allow_new_lock = (options[:extend_life] || options[:extend_only_if_life]) ? 'no' : 'yes'
 
       locked, time_elapsed = timed do
