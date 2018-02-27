@@ -149,7 +149,7 @@ module Redlock
     end
 
     def try_lock_instances(resource, ttl, options)
-      tries = options[:extend] ? 1 : @retry_count
+      tries = options[:extend] ? 1 : (@retry_count + 1)
 
       tries.times do |attempt_number|
         # Wait a random delay before retrying.
