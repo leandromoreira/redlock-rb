@@ -43,30 +43,27 @@ Or install it yourself as:
 
 ## Usage example
 
+### Acquiring a lock
+
 ```ruby
   # Locking
   lock_manager = Redlock::Client.new([ "redis://127.0.0.1:7777", "redis://127.0.0.1:7778", "redis://127.0.0.1:7779" ])
   first_try_lock_info = lock_manager.lock("resource_key", 2000)
   second_try_lock_info = lock_manager.lock("resource_key", 2000)
 
-  # it prints lock info {validity: 1987, resource: "resource_key", value: "generated_uuid4"}
   p first_try_lock_info
-  # it prints false
+  # => {validity: 1987, resource: "resource_key", value: "generated_uuid4"}
+
   p second_try_lock_info
+  # => false
 
   # Unlocking
   lock_manager.unlock(first_try_lock_info)
+
   second_try_lock_info = lock_manager.lock("resource_key", 2000)
 
-  # now it prints lock info
   p second_try_lock_info
-```
-
-Redlock works seamlessly with [redis sentinel](http://redis.io/topics/sentinel), which is supported in redis 3.2+. It also allows clients to set any other arbitrary options on the Redis connection, e.g. password, driver, and more.
-
-```ruby
-servers = [ 'redis://localhost:6379', Redis.new(:url => 'redis://someotherhost:6379') ]
-redlock = Redlock::Client.new(servers)
+  # => {validity: 1962, resource: "resource_key", value: "generated_uuid5"}
 ```
 
 There's also a block version that automatically unlocks the lock:
@@ -81,7 +78,7 @@ lock_manager.lock("resource_key", 2000) do |locked|
 end
 ```
 
-There's also a bang version that only executes the block if the lock is successfully acquired, returning the block's value as a result, or raising an exception otherwise:
+There's also a bang version that only executes the block if the lock is successfully acquired, returning the block's value as a result, or raising an exception otherwise. Passing a block is mandatory.
 
 ```ruby
 begin
@@ -93,33 +90,42 @@ rescue Redlock::LockError
 end
 ```
 
+### Extending a lock
+
 To extend the life of the lock:
 
 ```ruby
 begin
-  block_result = lock_manager.lock!("resource_key", 2000) do |lock_info|
-    # critical code
-    lock_manager.lock("resource key", 3000, extend: lock_info)
-    # more critical code
+  lock_info = lock_manager.lock("resource_key", 2000)
+  while lock_info
+    # Critical code
+
+    # Time up and more work to do? Extend the lock.
+    lock_info = lock_manager.lock("resource key", 3000, extend: lock_info)
   end
 rescue Redlock::LockError
   # error handling
 end
 ```
 
-The above code will also acquire the lock if the previous lock has expired and the lock is currently free. Keep in mind that this means the lock could have been acquired by someone else in the meantime. To only extend the life of the lock if currently locked by yourself, use `extend_life` parameter:
+The above code will also acquire the lock if the previous lock has expired and the lock is currently free. Keep in mind that this means the lock could have been acquired by someone else in the meantime. To only extend the life of the lock if currently locked by yourself, use the `extend_life` parameter:
 
 ```ruby
-begin
-  block_result = lock_manager.lock!("resource_key", 2000) do |lock_info|
-    # critical code
-    lock_manager.lock("resource key", 3000, extend: lock_info, extend_life: true)
-    # more critical code, only if lock was still hold
-  end
-rescue Redlock::LockError
-  # error handling
-end
+lock_manager.lock("resource key", 3000, extend: lock_info, extend_life: true)
 ```
+
+## Redis client configuration
+
+`Redlock::Client` expects URLs or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
+
+```ruby
+servers = [ 'redis://localhost:6379', Redis.new(:url => 'redis://someotherhost:6379') ]
+redlock = Redlock::Client.new(servers)
+```
+
+Redlock works seamlessly with [redis sentinel](http://redis.io/topics/sentinel), which is supported in redis 3.2+.
+
+## Redlock configuration
 
 It's possible to customize the retry logic providing the following options:
 
@@ -134,7 +140,6 @@ It's possible to customize the retry logic providing the following options:
 ```
 
 For more information you can check [documentation](http://www.rubydoc.info/gems/redlock/Redlock%2FClient:initialize).
-
 
 ## Run tests
 
