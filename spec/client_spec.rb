@@ -113,14 +113,14 @@ RSpec.describe Redlock::Client do
         expect(lock_info).to eql(false)
       end
 
-      it 'retries up to \'retry_count\' times' do
+      it 'tries up to \'retry_count\' + 1 times' do
         expect(lock_manager).to receive(:lock_instances).exactly(
-          lock_manager_opts[:retry_count]).times.and_return(false)
+          lock_manager_opts[:retry_count] + 1).times.and_return(false)
         lock_manager.lock(resource_key, ttl)
       end
 
       it 'sleeps in between retries' do
-        expect(lock_manager).to receive(:sleep).exactly(lock_manager_opts[:retry_count] - 1).times
+        expect(lock_manager).to receive(:sleep).exactly(lock_manager_opts[:retry_count]).times
         lock_manager.lock(resource_key, ttl)
       end
 
