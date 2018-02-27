@@ -41,3 +41,11 @@ RSpec::Matchers.define :be_lockable do |lock_manager, ttl|
     "expected that #{resource_key} would be lockable"
   end
 end
+
+RSpec.configure do |c|
+  # NOTE: this protects against erroneous "focus: true" commits
+  unless ENV['CI'] == 'true'
+    c.filter_run focus: true
+    c.run_all_when_everything_filtered = true
+  end
+end
