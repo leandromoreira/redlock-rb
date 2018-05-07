@@ -16,7 +16,6 @@ RSpec.describe Redlock::Client do
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
-      print redis1_host
       servers = [ "redis://#{redis1_host}:#{redis1_port}", Redis.new(url: "redis://#{redis2_host}:#{redis2_port}") ]
       redlock = Redlock::Client.new(servers)
 
@@ -138,6 +137,29 @@ RSpec.describe Redlock::Client do
           expect(sleep).to satisfy { |value| value < expected_maximum / 1000.to_f }
         end.at_least(:once)
         lock_manager.lock(resource_key, ttl)
+      end
+    end
+
+    context 'when a server goes away' do
+      it 'does not raise an error on connection issues' do
+        # We re-route the lock manager to a (hopefully) non-existent Redis URL.
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        redis_instance.instance_variable_set(:@redis, Redis.new(url: 'redis://localhost:46864'))
+
+        expect {
+          expect(lock_manager.lock(resource_key, ttl)).to be_falsey
+        }.to_not raise_error
+      end
+    end
+
+    context 'when a server comes back' do
+      it 'recovers from connection issues' do
+        # Same as above.
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        redis_instance.instance_variable_set(:@redis, Redis.new(url: 'redis://localhost:46864'))
+        expect(lock_manager.lock(resource_key, ttl)).to be_falsey
+        redis_instance.instance_variable_set(:@redis, Redis.new(url: "redis://#{redis1_host}:#{redis1_port}"))
+        expect(lock_manager.lock(resource_key, ttl)).to be_truthy
       end
     end
 

@@ -112,6 +112,8 @@ module Redlock
         recover_from_script_flush do
           @redis.evalsha @lock_script_sha, keys: [resource], argv: [val, ttl, allow_new_lock]
         end
+      rescue Redis::CannotConnectError
+        false
       end
 
       def unlock(resource, val)
