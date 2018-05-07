@@ -140,6 +140,29 @@ RSpec.describe Redlock::Client do
       end
     end
 
+    context 'when a server goes away' do
+      it 'does not raise an error on connection issues' do
+        # We re-route the lock manager to a (hopefully) non-existent Redis URL.
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        redis_instance.instance_variable_set(:@redis, Redis.new(url: 'redis://localhost:46864'))
+
+        expect {
+          expect(lock_manager.lock(resource_key, ttl)).to be_falsey
+        }.to_not raise_error
+      end
+    end
+
+    context 'when a server comes back' do
+      it 'recovers from connection issues' do
+        # Same as above.
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        redis_instance.instance_variable_set(:@redis, Redis.new(url: 'redis://localhost:46864'))
+        expect(lock_manager.lock(resource_key, ttl)).to be_falsey
+        redis_instance.instance_variable_set(:@redis, Redis.new(url: "redis://#{redis1_host}:#{redis1_port}"))
+        expect(lock_manager.lock(resource_key, ttl)).to be_truthy
+      end
+    end
+
     context 'when script cache has been flushed' do
       before(:each) do
         @manipulated_instance = lock_manager.instance_variable_get(:@servers).first
