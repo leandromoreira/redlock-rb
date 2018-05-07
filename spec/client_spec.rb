@@ -16,7 +16,6 @@ RSpec.describe Redlock::Client do
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
-      print redis1_host
       servers = [ "redis://#{redis1_host}:#{redis1_port}", Redis.new(url: "redis://#{redis2_host}:#{redis2_port}") ]
       redlock = Redlock::Client.new(servers)
 
