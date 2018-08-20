@@ -12,14 +12,27 @@ module Redlock
     DEFAULT_RETRY_JITTER  = 50
     CLOCK_DRIFT_FACTOR    = 0.01
 
+    ##
+    # Returns default time source function depending on CLOCK_MONOTONIC availability.
+    #
+    def self.default_time_source
+      if defined?(Process::CLOCK_MONOTONIC)
+        proc { (Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1000).to_i }
+      else
+        proc { (Time.now.to_f * 1000).to_i }
+      end
+    end
+
     # Create a distributed lock manager implementing redlock algorithm.
     # Params:
     # +servers+:: The array of redis connection URLs or Redis connection instances. Or a mix of both.
-    # +options+:: You can override the default value for `retry_count`, `retry_delay` and `retry_gitter`.
+    # +options+::
     #    * `retry_count`   being how many times it'll try to lock a resource (default: 3)
     #    * `retry_delay`   being how many ms to sleep before try to lock again (default: 200)
     #    * `retry_jitter`  being how many ms to jitter retry delay (default: 50)
     #    * `redis_timeout` being how the Redis timeout will be set in seconds (default: 0.1)
+    #    * `time_source`   being a callable object returning a monotonic time in milliseconds
+    #                      (default: see #default_time_source)
     def initialize(servers = DEFAULT_REDIS_URLS, options = {})
       redis_timeout = options[:redis_timeout] || DEFAULT_REDIS_TIMEOUT
       @servers = servers.map do |server|
@@ -33,6 +46,7 @@ module Redlock
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
       @retry_jitter = options[:retry_jitter] || DEFAULT_RETRY_JITTER
+      @time_source = options[:time_source] || self.class.default_time_source
     end
 
     # Locks a resource for a given time.
@@ -190,8 +204,8 @@ module Redlock
     end
 
     def timed
-      start_time = (Time.now.to_f * 1000).to_i
-      [yield, (Time.now.to_f * 1000).to_i - start_time]
+      start_time = @time_source.call()
+      [yield, @time_source.call() - start_time]
     end
   end
 end

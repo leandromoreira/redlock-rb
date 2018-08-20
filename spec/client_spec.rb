@@ -307,4 +307,23 @@ RSpec.describe Redlock::Client do
       end
     end
   end
+
+  describe '#default_time_source' do
+    context 'when CLOCK_MONOTONIC is available (MRI, JRuby)' do
+      it 'returns a callable using Process.clock_gettime()' do
+        skip 'CLOCK_MONOTONIC not defined' unless defined?(Process::CLOCK_MONOTONIC)
+        expect(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC).and_call_original
+        Redlock::Client.default_time_source.call()
+      end
+    end
+
+    context 'when CLOCK_MONOTONIC is not available' do
+      it 'returns a callable using Time.now()' do
+        cm = Process.send(:remove_const, :CLOCK_MONOTONIC)
+        expect(Time).to receive(:now).and_call_original
+        Redlock::Client.default_time_source.call()
+        Process.const_set(:CLOCK_MONOTONIC, cm) if cm
+      end
+    end
+  end
 end
