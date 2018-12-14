@@ -92,6 +92,10 @@ module Redlock
       end
     end
 
+    def locked?(resource)
+      @servers.map { |s| s.locked?(resource) }.uniq.include?(1)
+    end
+
     private
 
     class RedisInstance
@@ -110,6 +114,10 @@ module Redlock
         if (redis.call("exists", KEYS[1]) == 0 and ARGV[3] == "yes") or redis.call("get", KEYS[1]) == ARGV[1] then
           return redis.call("set", KEYS[1], ARGV[1], "PX", ARGV[2])
         end
+      eos
+
+      CHECK_SCRIPT = <<-eos
+        return redis.call("exists", KEYS[1]) == 1
       eos
 
       def initialize(connection)
@@ -138,11 +146,18 @@ module Redlock
         # Nothing to do, unlocking is just a best-effort attempt.
       end
 
+      def locked?(resource)
+        recover_from_script_flush do
+          @redis.evalsha @check_script_sha, keys: [resource]
+        end
+      end
+
       private
 
       def load_scripts
         @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
         @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
+        @check_script_sha = @redis.script(:load, CHECK_SCRIPT)
       end
 
       def recover_from_script_flush

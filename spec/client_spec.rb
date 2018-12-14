@@ -308,6 +308,31 @@ RSpec.describe Redlock::Client do
     end
   end
 
+  describe "#locked?" do
+
+    context "when lock is available" do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it "returns false" do
+        res = lock_manager.locked?(resource_key)
+
+        expect(res).to eq false
+      end
+
+    end
+
+    context "when lock is unavailable" do
+      before { @another_lock_info = lock_manager.lock(resource_key, ttl) }
+      after { lock_manager.unlock(@another_lock_info) }
+
+      it "returns true" do
+        res = lock_manager.locked?(resource_key)
+
+        expect(res).to eq true
+      end
+    end
+  end
+
   describe '#default_time_source' do
     context 'when CLOCK_MONOTONIC is available (MRI, JRuby)' do
       it 'returns a callable using Process.clock_gettime()' do
