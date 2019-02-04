@@ -118,8 +118,6 @@ module Redlock
         else
           @redis = Redis.new(connection)
         end
-
-        load_scripts
       end
 
       def lock(resource, val, ttl, allow_new_lock)
