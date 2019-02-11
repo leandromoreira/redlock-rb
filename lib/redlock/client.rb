@@ -99,6 +99,13 @@ module Redlock
       @servers.any? { |s| s.lock_exists?(resource)}
     end
 
+    # Checks is we own the lock for a resource.
+    # Params:
+    # +lock_info+:: The lock that has been acquired when you locked the resource.
+    def owner?(lock_info)
+      @servers.any? { |s| s.lock_exists?(lock_info[:resource], lock_info[:value])}
+    end
+
     private
 
     class RedisInstance

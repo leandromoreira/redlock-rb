@@ -323,6 +323,26 @@ RSpec.describe Redlock::Client do
     end
   end
 
+  describe '#owner?' do
+    subject { lock_manager.owner?(lock_info) }
+
+    let(:value) { @another_lock_info[:value] }
+    let(:lock_info) { @another_lock_info.merge(value: value) }
+
+    before { @another_lock_info = lock_manager.lock(resource_key, ttl) }
+    after { lock_manager.unlock(@another_lock_info) }
+
+    context 'when lock is not owned' do
+      let(:value) { 'invalid hex' }
+
+      it { is_expected.to eq false }
+    end
+
+    context 'when lock is owned' do
+      it { is_expected.to eq true }
+    end
+  end
+
   describe '#default_time_source' do
     context 'when CLOCK_MONOTONIC is available (MRI, JRuby)' do
       it 'returns a callable using Process.clock_gettime()' do
