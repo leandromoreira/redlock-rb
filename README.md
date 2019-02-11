@@ -113,6 +113,25 @@ The above code will also acquire the lock if the previous lock has expired and t
 lock_manager.lock("resource key", 3000, extend: lock_info, extend_life: true)
 ```
 
+### Checking if a lock exists
+
+If you intend to try and acquire a lock always use [`#lock`](#acquiring-a-lock)
+
+```ruby
+lock_manager = Redlock::Client.new([ "redis://127.0.0.1:7777", "redis://127.0.0.1:7778", "redis://127.0.0.1:7779" ])
+
+lock_manager.locked?("resource_key")
+# => false
+
+lock_info = lock_manager.lock("resource_key", 2000)
+# => {validty: 1987, resource: "resource_key", value: "generated_uuid4"}
+
+lock_manager.locked?("resource_key")
+# => true
+```
+
+Note: The indication given here does not mean a client is currently holding the lock. It might indicate that a client is holding it, or was holding it, or is currently trying to acquire it. It does not even tell you that it is currently possible to acquire the lock by the client asking `locked?`
+
 ## Redis client configuration
 
 `Redlock::Client` expects URLs or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
