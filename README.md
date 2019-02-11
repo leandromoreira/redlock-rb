@@ -132,6 +132,21 @@ lock_manager.locked?("resource_key")
 
 Note: The indication given here does not mean a client is currently holding the lock. It might indicate that a client is holding it, or was holding it, or is currently trying to acquire it. It does not even tell you that it is currently possible to acquire the lock by the client asking `locked?`
 
+### Validating lock ownership
+
+```ruby
+lock_manager = Redlock::Client.new([ "redis://127.0.0.1:7777", "redis://127.0.0.1:7778", "redis://127.0.0.1:7779" ])
+lock_info = lock_manager.lock("resource_key", 2000)
+
+lock_manager.owner?(lock_info)
+# => true
+
+sleep 3
+
+lock_manager.owner?(lock_info)
+# => false
+```
+
 ## Redis client configuration
 
 `Redlock::Client` expects URLs or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
