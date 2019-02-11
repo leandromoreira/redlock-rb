@@ -92,6 +92,13 @@ module Redlock
       end
     end
 
+    # Checks if a lock for resource exists.
+    # Params:
+    # +resource+:: the resource (or key) string to be checked
+    def locked?(resource)
+      @servers.any? { |s| s.lock_exists?(resource)}
+    end
+
     private
 
     class RedisInstance
@@ -134,6 +141,14 @@ module Redlock
         end
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
+      end
+
+      def lock_exists?(resource, value = nil)
+        if value
+          @redis.exists(resource) && @redis.get(resource) == value
+        else
+          @redis.exists(resource)
+        end
       end
 
       private
