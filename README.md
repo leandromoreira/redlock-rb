@@ -44,6 +44,7 @@ Or install it yourself as:
 
 ### Acquiring a lock
 
+NOTE: All expiration durations are in milliseconds.
 ```ruby
   # Locking
   lock_manager = Redlock::Client.new([ "redis://127.0.0.1:7777", "redis://127.0.0.1:7778", "redis://127.0.0.1:7779" ])
