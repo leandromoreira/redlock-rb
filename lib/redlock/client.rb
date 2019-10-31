@@ -55,7 +55,8 @@ module Redlock
     # +ttl+:: The time-to-live in ms for the lock.
     # +options+:: Hash of optional parameters
     #  * +extend+: A lock ("lock_info") to extend.
-    #  * +extend_only_if_life+: If +extend+ is given, only acquire lock if currently held
+    #  * +extend_only_if_life+: Boolean, if +extend+ is given, only acquire lock if currently held
+    #  * +extend_life+: Same as +extend_only_if_life+
     # +block+:: an optional block to be executed; after its execution, the lock (if successfully
     # acquired) is automatically unlocked.
     def lock(resource, ttl, options = {}, &block)
@@ -178,7 +179,7 @@ module Redlock
 
     def lock_instances(resource, ttl, options)
       value = (options[:extend] || { value: SecureRandom.uuid })[:value]
-      allow_new_lock = (options[:extend_life] || options[:extend_only_if_life]) ? 'no' : 'yes'
+      allow_new_lock = (options[:extend_only_if_life] || options[:extend_life]) ? 'no' : 'yes'
 
       locked, time_elapsed = timed do
         @servers.select { |s| s.lock resource, value, ttl, allow_new_lock }.size

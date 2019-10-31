@@ -76,7 +76,7 @@ RSpec.describe Redlock::Client do
         lock_info = lock_manager.lock(resource_key, ttl)
         expect(resource_key).to_not be_lockable(lock_manager, ttl)
 
-        lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_life: true)
+        lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_only_if_life: true)
         expect(lock_info).not_to be_nil
         expect(redis_client.pttl(resource_key)).to be_within(200).of(ttl)
       end

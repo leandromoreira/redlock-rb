@@ -108,10 +108,10 @@ rescue Redlock::LockError
 end
 ```
 
-The above code will also acquire the lock if the previous lock has expired and the lock is currently free. Keep in mind that this means the lock could have been acquired by someone else in the meantime. To only extend the life of the lock if currently locked by yourself, use the `extend_life` parameter:
+The above code will also acquire the lock if the previous lock has expired and the lock is currently free. Keep in mind that this means the lock could have been acquired by someone else in the meantime. To only extend the life of the lock if currently locked by yourself, use the `extend_only_if_life` parameter:
 
 ```ruby
-lock_manager.lock("resource key", 3000, extend: lock_info, extend_life: true)
+lock_manager.lock("resource key", 3000, extend: lock_info, extend_only_if_life: true)
 ```
 
 ## Redis client configuration
