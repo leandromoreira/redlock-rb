@@ -56,11 +56,14 @@ module Redlock
     # +options+:: Hash of optional parameters
     #  * +extend+: A lock ("lock_info") to extend.
     #  * +extend_only_if_life+: Boolean, if +extend+ is given, only acquire lock if currently held
-    #  * +extend_life+: Same as +extend_only_if_life+
+    #  * +extend_life+: Deprecated, same as +extend_only_if_life+
     # +block+:: an optional block to be executed; after its execution, the lock (if successfully
     # acquired) is automatically unlocked.
     def lock(resource, ttl, options = {}, &block)
       lock_info = try_lock_instances(resource, ttl, options)
+      if options[:extend_life] && !Gem::Deprecate.skip
+        warn 'DEPRECATION WARNING: The `extend_life` option has been renamed `extend_only_if_life`.'
+      end
 
       if block_given?
         begin

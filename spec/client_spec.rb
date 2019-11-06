@@ -94,6 +94,17 @@ RSpec.describe Redlock::Client do
         second_attempt = lock_manager.lock(resource_key, ttl)
         expect(second_attempt).to eq(false)
       end
+
+      context 'when extend_life flag is given' do
+        it 'treats it as extend_only_if_life but warns it is deprecated' do
+          ttl = 20_000
+          lock_info = lock_manager.lock(resource_key, ttl)
+          expect(resource_key).to_not be_lockable(lock_manager, ttl)
+          expect(lock_manager).to receive(:warn).with(/DEPRECATION WARNING: The `extend_life`/)
+          lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_life: true)
+          expect(lock_info).not_to be_nil
+        end
+      end
     end
 
     context 'when lock is not available' do
