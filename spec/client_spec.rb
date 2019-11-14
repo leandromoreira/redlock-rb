@@ -64,9 +64,9 @@ RSpec.describe Redlock::Client do
         end
       end
 
-      context 'when extend_only_if_life flag is given' do
+      context 'when extend_only_if_locked flag is given' do
         it 'does not extend a non-existent lock' do
-          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_life: true)
+          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_locked: true)
           expect(@lock_info).to eq(false)
         end
       end
@@ -76,14 +76,14 @@ RSpec.describe Redlock::Client do
         lock_info = lock_manager.lock(resource_key, ttl)
         expect(resource_key).to_not be_lockable(lock_manager, ttl)
 
-        lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_only_if_life: true)
+        lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_only_if_locked: true)
         expect(lock_info).not_to be_nil
         expect(redis_client.pttl(resource_key)).to be_within(200).of(ttl)
       end
 
-      context 'when extend_only_if_life flag is not given' do
+      context 'when extend_only_if_locked flag is not given' do
         it "sets the given value when trying to extend a non-existent lock" do
-          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_life: false)
+          @lock_info = lock_manager.lock(resource_key, ttl, extend: {value: 'hello world'}, extend_only_if_locked: false)
           expect(@lock_info).to be_lock_info_for(resource_key)
           expect(@lock_info[:value]).to eq('hello world') # really we should test what's in redis
         end
@@ -96,12 +96,23 @@ RSpec.describe Redlock::Client do
       end
 
       context 'when extend_life flag is given' do
-        it 'treats it as extend_only_if_life but warns it is deprecated' do
+        it 'treats it as extend_only_if_locked but warns it is deprecated' do
           ttl = 20_000
           lock_info = lock_manager.lock(resource_key, ttl)
           expect(resource_key).to_not be_lockable(lock_manager, ttl)
           expect(lock_manager).to receive(:warn).with(/DEPRECATION WARNING: The `extend_life`/)
           lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_life: true)
+          expect(lock_info).not_to be_nil
+        end
+      end
+
+      context 'when extend_only_if_life flag is given' do
+        it 'treats it as extend_only_if_locked but warns it is deprecated' do
+          ttl = 20_000
+          lock_info = lock_manager.lock(resource_key, ttl)
+          expect(resource_key).to_not be_lockable(lock_manager, ttl)
+          expect(lock_manager).to receive(:warn).with(/DEPRECATION WARNING: The `extend_only_if_life`/)
+          lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_only_if_life: true)
           expect(lock_info).not_to be_nil
         end
       end
