@@ -316,7 +316,9 @@ RSpec.describe Redlock::Client do
       after { lock_manager.unlock(@another_lock_info) }
 
       it 'raises a LockError' do
-        expect { lock_manager.lock!(resource_key, ttl) {} }.to raise_error(Redlock::LockError)
+        expect { lock_manager.lock!(resource_key, ttl) {} }.to raise_error(
+          Redlock::LockError, "failed to acquire lock on '#{resource_key}'"
+        )
       end
 
       it 'does not execute the block' do
