@@ -93,11 +93,11 @@ module Redlock
     # Locks a resource, executing the received block only after successfully acquiring the lock,
     # and returning its return value as a result.
     # See Redlock::Client#lock for parameters.
-    def lock!(*args)
+    def lock!(resource, *args)
       fail 'No block passed' unless block_given?
 
-      lock(*args) do |lock_info|
-        raise LockError, 'failed to acquire lock' unless lock_info
+      lock(resource, *args) do |lock_info|
+        raise LockError, resource unless lock_info
         return yield
       end
     end
