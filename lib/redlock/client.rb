@@ -190,13 +190,24 @@ module Redlock
 
       tries.times do |attempt_number|
         # Wait a random delay before retrying.
-        sleep((@retry_delay + rand(@retry_jitter)).to_f / 1000) if attempt_number > 0
+        sleep(attempt_retry_delay(attempt_number)) if attempt_number > 0
 
         lock_info = lock_instances(resource, ttl, options)
         return lock_info if lock_info
       end
 
       false
+    end
+
+    def attempt_retry_delay(attempt_number)
+      retry_delay =
+        if @retry_delay.respond_to?(:call)
+          @retry_delay.call(attempt_number)
+        else
+          @retry_delay
+        end
+
+      (retry_delay + rand(@retry_jitter)).to_f / 1000
     end
 
     def lock_instances(resource, ttl, options)
