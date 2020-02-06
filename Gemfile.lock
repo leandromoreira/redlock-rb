@@ -7,6 +7,7 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    connection_pool (2.2.2)
     coveralls (0.8.22)
       json (>= 1.8, < 3)
       simplecov (~> 0.16.1)
@@ -45,6 +46,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  connection_pool (~> 2.2)
   coveralls (~> 0.8)
   rake (~> 11.1, >= 11.1.2)
   redlock!

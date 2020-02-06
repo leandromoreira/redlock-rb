@@ -1,6 +1,7 @@
 require 'spec_helper'
 require 'securerandom'
 require 'redis'
+require 'connection_pool'
 
 RSpec.describe Redlock::Client do
   # It is recommended to have at least 3 servers in production
@@ -24,6 +25,15 @@ RSpec.describe Redlock::Client do
       end
 
       expect(redlock_servers).to match_array([redis1_host, redis2_host])
+    end
+
+    it 'accepts ConnectionPool objects' do
+      pool = ConnectionPool.new { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
+      redlock = Redlock::Client.new([pool])
+
+      lock_info = lock_manager.lock(resource_key, ttl)
+      expect(resource_key).to_not be_lockable(lock_manager, ttl)
+      lock_manager.unlock(lock_info)
     end
   end
 
@@ -166,7 +176,7 @@ RSpec.describe Redlock::Client do
       it 'does not raise an error on connection issues' do
         # We re-route the lock manager to a (hopefully) non-existent Redis URL.
         redis_instance = lock_manager.instance_variable_get(:@servers).first
-        redis_instance.instance_variable_set(:@redis, Redis.new(url: 'redis://localhost:46864'))
+        redis_instance.instance_variable_set(:@redis, unreachable_redis)
 
         expect {
           expect(lock_manager.lock(resource_key, ttl)).to be_falsey
@@ -178,11 +188,20 @@ RSpec.describe Redlock::Client do
       it 'recovers from connection issues' do
         # Same as above.
         redis_instance = lock_manager.instance_variable_get(:@servers).first
-        redis_instance.instance_variable_set(:@redis, Redis.new(url: 'redis://localhost:46864'))
+        old_redis = redis_instance.instance_variable_get(:@redis)
+        redis_instance.instance_variable_set(:@redis, unreachable_redis)
         expect(lock_manager.lock(resource_key, ttl)).to be_falsey
-        redis_instance.instance_variable_set(:@redis, Redis.new(url: "redis://#{redis1_host}:#{redis1_port}"))
+        redis_instance.instance_variable_set(:@redis, old_redis)
         expect(lock_manager.lock(resource_key, ttl)).to be_truthy
       end
+    end
+
+    def unreachable_redis
+      redis = Redis.new(url: 'redis://localhost:46864')
+      def redis.with
+        yield self
+      end
+      redis
     end
 
     context 'when script cache has been flushed' do
