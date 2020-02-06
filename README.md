@@ -139,6 +139,14 @@ It's possible to customize the retry logic providing the following options:
                  })
 ```
 
+It is possible to associate `:retry_delay` option with `Proc` object. It will be called every time, with attempt number
+as argument, to get delay time value before next retry.
+
+```ruby
+retry_delay = proc { |attempt_number| 200 * attempt_number ** 2 } # delay of 200ms for 1st retry, 800ms for 2nd retry, etc.
+lock_manager = Redlock::Client.new(servers, retry_delay: retry_delay)
+```
+
 For more information you can check [documentation](http://www.rubydoc.info/gems/redlock/Redlock%2FClient:initialize).
 
 ## Run tests

@@ -170,6 +170,22 @@ RSpec.describe Redlock::Client do
         end.at_least(:once)
         lock_manager.lock(resource_key, ttl)
       end
+
+      it 'accepts retry_delay as proc' do
+        retry_delay = proc do |attempt_number|
+          expect(attempt_number).to eq(1)
+          2000
+        end
+
+        lock_manager = Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS, retry_count: 1, retry_delay: retry_delay)
+        another_lock_info = lock_manager.lock(resource_key, ttl)
+
+        expect(lock_manager).to receive(:sleep) do |sleep|
+          expect(sleep * 1000).to be_within(described_class::DEFAULT_RETRY_JITTER).of(2000)
+        end.exactly(:once)
+        lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(another_lock_info)
+      end
     end
 
     context 'when a server goes away' do
