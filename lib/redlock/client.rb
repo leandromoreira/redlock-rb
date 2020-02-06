@@ -122,11 +122,22 @@ module Redlock
         end
       eos
 
+      module ConnectionPoolLike
+        def with
+          yield self
+        end
+      end
+
       def initialize(connection)
-        if connection.respond_to?(:client)
+        if connection.respond_to?(:with)
           @redis = connection
         else
-          @redis = Redis.new(connection)
+          if connection.respond_to?(:client)
+            @redis = connection
+          else
+            @redis = Redis.new(connection)
+          end
+          @redis.extend(ConnectionPoolLike)
         end
 
         load_scripts
@@ -134,7 +145,7 @@ module Redlock
 
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.evalsha @lock_script_sha, keys: [resource], argv: [val, ttl, allow_new_lock]
+          @redis.with { |conn| conn.evalsha @lock_script_sha, keys: [resource], argv: [val, ttl, allow_new_lock] }
         end
       rescue Redis::BaseConnectionError
         false
@@ -142,7 +153,7 @@ module Redlock
 
       def unlock(resource, val)
         recover_from_script_flush do
-          @redis.evalsha @unlock_script_sha, keys: [resource], argv: [val]
+          @redis.with { |conn| conn.evalsha @unlock_script_sha, keys: [resource], argv: [val] }
         end
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
@@ -151,8 +162,8 @@ module Redlock
       private
 
       def load_scripts
-        @unlock_script_sha = @redis.script(:load, UNLOCK_SCRIPT)
-        @lock_script_sha = @redis.script(:load, LOCK_SCRIPT)
+        @unlock_script_sha = @redis.with { |conn| conn.script(:load, UNLOCK_SCRIPT) }
+        @lock_script_sha = @redis.with { |conn| conn.script(:load, LOCK_SCRIPT) }
       end
 
       def recover_from_script_flush
