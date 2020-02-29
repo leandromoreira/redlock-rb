@@ -1,11 +1,9 @@
-[![Stories in Ready](https://badge.waffle.io/leandromoreira/redlock-rb.png?label=ready&title=Ready)](https://waffle.io/leandromoreira/redlock-rb)
 [![Build Status](https://travis-ci.org/leandromoreira/redlock-rb.svg?branch=master)](https://travis-ci.org/leandromoreira/redlock-rb)
 [![Coverage Status](https://coveralls.io/repos/leandromoreira/redlock-rb/badge.svg?branch=master)](https://coveralls.io/r/leandromoreira/redlock-rb?branch=master)
 [![Code Climate](https://codeclimate.com/github/leandromoreira/redlock-rb/badges/gpa.svg)](https://codeclimate.com/github/leandromoreira/redlock-rb)
 [![Gem Version](https://badge.fury.io/rb/redlock.svg)](http://badge.fury.io/rb/redlock)
 [![security](https://hakiri.io/github/leandromoreira/redlock-rb/master.svg)](https://hakiri.io/github/leandromoreira/redlock-rb/master)
 [![Inline docs](http://inch-ci.org/github/leandromoreira/redlock-rb.svg?branch=master)](http://inch-ci.org/github/leandromoreira/redlock-rb)
-[![Join the chat at https://gitter.im/leandromoreira/redlock-rb](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/leandromoreira/redlock-rb?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
 # Redlock - A ruby distributed lock using redis.
