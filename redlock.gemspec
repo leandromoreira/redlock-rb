@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'redis', '>= 3.0.0', '< 5.0'
 
   spec.add_development_dependency "coveralls", "~> 0.8"
-  spec.add_development_dependency 'rake', '~> 11.1', '>= 11.1.2'
+  spec.add_development_dependency 'rake', '>= 11.1.2', '~> 13.0'
   spec.add_development_dependency 'rspec', '~> 3', '>= 3.0.0'
   spec.add_development_dependency 'connection_pool', '~> 2.2'
 end
