@@ -1,3 +1,5 @@
+require 'redlock'
+
 module Redlock
   class Client
     class << self
