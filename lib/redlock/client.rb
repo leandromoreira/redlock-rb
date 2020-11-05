@@ -109,6 +109,14 @@ module Redlock
       try_get_remaining_ttl(lock_info[:resource], lock_info[:value])
     end
 
+    # Checks if a resource is locked
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource
+    def locked?(lock_info)
+      ttl = get_remaining_ttl(lock_info)
+      !(ttl.nil? || ttl.zero?)
+    end
+
     private
 
     class RedisInstance
@@ -252,7 +260,7 @@ module Redlock
 
     def try_get_remaining_ttl(resource, value)
       ttls, time_elapsed = timed do
-        @servers.map { |s| s.get_remaining_ttl resource, value }
+        @servers.map { |s| s.get_remaining_ttl resource, value }.compact
       end
 
       if ttls.size >= @quorum

@@ -370,11 +370,30 @@ RSpec.describe Redlock::Client do
   describe 'get_remaining_ttl' do
     after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
 
-    it 'gets the remaining ttl of a lock', focus: true do
-      ttl = 20000
+    it 'gets the remaining ttl of a lock' do
+      ttl = 20_000
       @lock_info = lock_manager.lock(resource_key, ttl)
       remaining_ttl = lock_manager.get_remaining_ttl(@lock_info)
       expect(remaining_ttl).to be_within(300).of(ttl)
+    end
+  end
+
+  describe 'locked?' do
+    context 'when lock is available' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'returns true' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        expect(lock_manager).to be_locked(@lock_info)
+      end
+    end
+
+    context 'when lock is not available' do
+      it 'returns false' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(@lock_info)
+        expect(lock_manager).not_to be_locked(@lock_info)
+      end
     end
   end
 
