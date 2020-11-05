@@ -102,6 +102,13 @@ module Redlock
       end
     end
 
+    # Gets remaining ttl of a resource
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource
+    def get_remaining_ttl(lock_info)
+      try_get_remaining_ttl(lock_info[:resource], lock_info[:value])
+    end
+
     private
 
     class RedisInstance
@@ -119,6 +126,12 @@ module Redlock
       LOCK_SCRIPT = <<-eos
         if (redis.call("exists", KEYS[1]) == 0 and ARGV[3] == "yes") or redis.call("get", KEYS[1]) == ARGV[1] then
           return redis.call("set", KEYS[1], ARGV[1], "PX", ARGV[2])
+        end
+      eos
+
+      PTTL_SCRIPT = <<-eos
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+          return redis.call("pttl", KEYS[1])
         end
       eos
 
@@ -159,11 +172,20 @@ module Redlock
         # Nothing to do, unlocking is just a best-effort attempt.
       end
 
+      def get_remaining_ttl(resource, val)
+        recover_from_script_flush do
+          @redis.with { |conn| conn.evalsha @pttl_script_sha, keys: [resource], argv: [val] }
+        end
+      rescue Redis::BaseConnectionError
+        nil
+      end
+
       private
 
       def load_scripts
         @unlock_script_sha = @redis.with { |conn| conn.script(:load, UNLOCK_SCRIPT) }
         @lock_script_sha = @redis.with { |conn| conn.script(:load, LOCK_SCRIPT) }
+        @pttl_script_sha = @redis.with { |conn| conn.script(:load, PTTL_SCRIPT) }
       end
 
       def recover_from_script_flush
@@ -225,6 +247,22 @@ module Redlock
       else
         @servers.each { |s| s.unlock(resource, value) }
         false
+      end
+    end
+
+    def try_get_remaining_ttl(resource, value)
+      ttls, time_elapsed = timed do
+        @servers.map { |s| s.get_remaining_ttl resource, value }
+      end
+
+      if ttls.size >= @quorum
+        min_ttl = ttls.sort.last(@quorum).min
+        min_ttl - time_elapsed - drift(min_ttl)
+      else
+        # TODO: This nil is overloaded, it could mean that we did not find the
+        # value, or that we could not achieve quorum. Maybe we want to do
+        # something different in the latter case?
+        nil
       end
     end
 

@@ -367,6 +367,17 @@ RSpec.describe Redlock::Client do
     end
   end
 
+  describe 'get_remaining_ttl' do
+    after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+    it 'gets the remaining ttl of a lock', focus: true do
+      ttl = 20000
+      @lock_info = lock_manager.lock(resource_key, ttl)
+      remaining_ttl = lock_manager.get_remaining_ttl(@lock_info)
+      expect(remaining_ttl).to be_within(300).of(ttl)
+    end
+  end
+
   describe '#default_time_source' do
     context 'when CLOCK_MONOTONIC is available (MRI, JRuby)' do
       it 'returns a callable using Process.clock_gettime()' do
