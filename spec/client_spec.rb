@@ -7,7 +7,7 @@ RSpec.describe Redlock::Client do
   # It is recommended to have at least 3 servers in production
   let(:lock_manager_opts) { { retry_count: 3 } }
   let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS, lock_manager_opts) }
-  let(:redis_client) { Redis.new }
+  let(:redis_client) { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
   let(:redis1_host) { ENV["REDIS1_HOST"] || "localhost" }
