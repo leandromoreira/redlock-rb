@@ -299,6 +299,9 @@ module Redlock
         ttls_by_value.max_by { |(lock_value, ttls)| ttls.length }
 
       if ttls && ttls.size >= @quorum
+        # Return the  minimum TTL of an N/2+1 selection. It will always be
+        # correct (it will guarantee that at least N/2+1 servers have a TTL that
+        # value or longer)
         min_ttl = ttls.sort.last(@quorum).min
         min_ttl = min_ttl - time_elapsed - drift(min_ttl)
         { value: authoritative_value, ttl: min_ttl }

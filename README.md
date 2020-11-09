@@ -112,6 +112,68 @@ The above code will also acquire the lock if the previous lock has expired and t
 lock_manager.lock("resource key", 3000, extend: lock_info, extend_only_if_locked: true)
 ```
 
+### Querying lock status
+
+You can check if a resource is locked:
+
+```ruby
+resource = "resource_key"
+lock_info = lock_manager.lock(resource, 2000)
+lock_manager.locked?(resource)
+#=> true
+
+lock_manager.unlock(lock_info)
+lock_manager.locked?(resource)
+#=> false
+```
+
+Any caller can call the above method to query the status. If you hold a lock and would like to check if it is valid, you can use the `valid_lock?` method:
+
+```ruby
+lock_info = lock_manager.lock("resource_key", 2000)
+lock_manager.valid_lock?(lock_info)
+#=> true
+
+lock_manager.unlock(lock_info)
+lock_manager.valid_lock?(lock_info)
+#=> false
+```
+
+The above methods **are not safe if you are using this to time critical code**, since they return true if the lock has not expired, even if there's only (for example) 1ms left on the lock. If you want to safely time the lock validity, you can use the `get_remaining_ttl_for_lock` and `get_remaining_ttl_for_resource` methods.
+
+Use `get_remaining_ttl_for_lock` if you hold a lock and want to check the TTL specifically for your lock:
+```ruby
+resource = "resource_key"
+lock_info = lock_manager.lock(resource, 2000)
+sleep 1
+
+lock_manager.get_remaining_ttl_for_lock(lock_info)
+#=> 986
+
+lock_manager.unlock(lock_info)
+lock_manager.get_remaining_ttl_for_lock(lock_info)
+#=> nil 
+```
+
+Use `get_remaining_ttl_for_resource` if you do not hold a lock, but want to know the remaining TTL on a locked resource:
+```ruby
+# Some part of the code
+resource = "resource_key"
+lock_info = lock_manager.lock(resource, 2000)
+
+# Some other part of the code
+lock_manager.locked?(resource)
+#=> true
+lock_manager.get_remaining_ttl_for_resource(resource)
+#=> 1975 
+
+# Sometime later
+lock_manager.locked?(resource)
+#=> false
+lock_manager.get_remaining_ttl_for_resource(resource)
+#=> nil 
+```
+
 ## Redis client configuration
 
 `Redlock::Client` expects URLs or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
