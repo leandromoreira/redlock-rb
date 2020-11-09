@@ -367,14 +367,70 @@ RSpec.describe Redlock::Client do
     end
   end
 
-  describe 'get_remaining_ttl' do
-    after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+  describe 'get_remaining_ttl_for_resource' do
+    context 'when lock is valid' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
 
-    it 'gets the remaining ttl of a lock' do
-      ttl = 20_000
-      @lock_info = lock_manager.lock(resource_key, ttl)
-      remaining_ttl = lock_manager.get_remaining_ttl(@lock_info)
-      expect(remaining_ttl).to be_within(300).of(ttl)
+      it 'gets the remaining ttl of a lock' do
+        ttl = 20_000
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_resource(resource_key)
+        expect(remaining_ttl).to be_within(300).of(ttl)
+      end
+
+      context 'when servers respond with varying ttls' do
+        let (:servers) { ["redis://#{redis1_host}:#{redis1_port}", "redis://#{redis2_host}:#{redis2_port}"] }
+        let (:redlock) { Redlock::Client.new(servers) }
+        after(:each) { redlock.unlock(@lock_info) if @lock_info }
+
+        it 'returns the minimum ttl value' do
+          ttl = 20_000
+          @lock_info = redlock.lock(resource_key, ttl)
+
+          # Mock redis server responses to return different tts
+          returned_ttls = [20_000, 10_000]
+          redlock.instance_variable_get(:@servers).each_with_index do |server, index|
+            allow(server).to(receive(:get_remaining_ttl))
+              .with(resource_key)
+              .and_return([@lock_info[:value], returned_ttls[index]])
+          end
+
+          remaining_ttl = redlock.get_remaining_ttl_for_lock(@lock_info)
+
+          # Assert that the TTL is closer to the lower value than the higher one
+          expect(remaining_ttl).not_to be_within(300).of(returned_ttls.max)
+          expect(remaining_ttl).to be_within(300).of(returned_ttls.min)
+        end
+      end
+    end
+
+    context 'when lock is not valid' do
+      it 'returns nil' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_resource(resource_key)
+        expect(remaining_ttl).to be_nil
+      end
+    end
+  end
+  describe 'get_remaining_ttl_for_lock' do
+    context 'when lock is valid' do
+      it 'gets the remaining ttl of a lock' do
+        ttl = 20_000
+        lock_info = lock_manager.lock(resource_key, ttl)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_lock(lock_info)
+        expect(remaining_ttl).to be_within(300).of(ttl)
+        lock_manager.unlock(lock_info)
+      end
+    end
+
+    context 'when lock is not valid' do
+      it 'returns nil' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_lock(lock_info)
+        expect(remaining_ttl).to be_nil
+      end
     end
   end
 
@@ -384,15 +440,34 @@ RSpec.describe Redlock::Client do
 
       it 'returns true' do
         @lock_info = lock_manager.lock(resource_key, ttl)
-        expect(lock_manager).to be_locked(@lock_info)
+        expect(lock_manager).to be_locked(resource_key)
       end
     end
 
     context 'when lock is not available' do
       it 'returns false' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        expect(lock_manager).not_to be_locked(resource_key)
+      end
+    end
+  end
+
+  describe 'valid_lock?' do
+    context 'when lock is available' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'returns true' do
         @lock_info = lock_manager.lock(resource_key, ttl)
-        lock_manager.unlock(@lock_info)
-        expect(lock_manager).not_to be_locked(@lock_info)
+        expect(lock_manager).to be_valid_lock(@lock_info)
+      end
+    end
+
+    context 'when lock is not available' do
+      it 'returns false' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        expect(lock_manager).not_to be_valid_lock(lock_info)
       end
     end
   end

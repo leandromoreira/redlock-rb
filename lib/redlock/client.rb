@@ -102,18 +102,41 @@ module Redlock
       end
     end
 
-    # Gets remaining ttl of a resource
+    # Gets remaining ttl of a resource. The ttl is returned if the holder
+    # currently holds the lock and it has not expired, otherwise the method
+    # returns nil.
     # Params:
+    # +resource+:: the name of the resource (string) for which to check the ttl
     # +lock_info+:: the lock that has been acquired when you locked the resource
-    def get_remaining_ttl(lock_info)
-      try_get_remaining_ttl(lock_info[:resource], lock_info[:value])
+    def get_remaining_ttl_for_lock(lock_info)
+      ttl_info = try_get_remaining_ttl(lock_info[:resource])
+      return nil if ttl_info.nil? || ttl_info[:value] != lock_info[:value]
+      ttl_info[:ttl]
+    end
+
+    # Gets remaining ttl of a resource. If there is no valid lock, the method
+    # returns nil.
+    # Params:
+    # +resource+:: the name of the resource (string) for which to check the ttl
+    def get_remaining_ttl_for_resource(resource)
+      ttl_info = try_get_remaining_ttl(resource)
+      return nil if ttl_info.nil?
+      ttl_info[:ttl]
     end
 
     # Checks if a resource is locked
     # Params:
     # +lock_info+:: the lock that has been acquired when you locked the resource
-    def locked?(lock_info)
-      ttl = get_remaining_ttl(lock_info)
+    def locked?(resource)
+      ttl = get_remaining_ttl_for_resource(resource)
+      !(ttl.nil? || ttl.zero?)
+    end
+
+    # Checks if a lock is still valid
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource
+    def valid_lock?(lock_info)
+      ttl = get_remaining_ttl_for_lock(lock_info)
       !(ttl.nil? || ttl.zero?)
     end
 
@@ -138,8 +161,8 @@ module Redlock
       eos
 
       PTTL_SCRIPT = <<-eos
-        if redis.call("get", KEYS[1]) == ARGV[1] then
-          return redis.call("pttl", KEYS[1])
+        if redis.call("exists", KEYS[1]) then
+          return { redis.call("get", KEYS[1]), redis.call("pttl", KEYS[1]) }
         end
       eos
 
@@ -180,9 +203,9 @@ module Redlock
         # Nothing to do, unlocking is just a best-effort attempt.
       end
 
-      def get_remaining_ttl(resource, val)
+      def get_remaining_ttl(resource)
         recover_from_script_flush do
-          @redis.with { |conn| conn.evalsha @pttl_script_sha, keys: [resource], argv: [val] }
+          @redis.with { |conn| conn.evalsha @pttl_script_sha, keys: [resource] }
         end
       rescue Redis::BaseConnectionError
         nil
@@ -258,18 +281,29 @@ module Redlock
       end
     end
 
-    def try_get_remaining_ttl(resource, value)
-      ttls, time_elapsed = timed do
-        @servers.map { |s| s.get_remaining_ttl resource, value }.compact
+    def try_get_remaining_ttl(resource)
+      # Responses from the servers are either nil, or a 2 tuple of format
+      # [lock_value, ttl]. Since servers may have different lock values, the
+      # responses are grouped by the lock_value and transofrmed into a hash:
+      # { lock_value1 => [ttl1, ttl2, ttl3], lock_value2 => [ttl4, tt5] }
+      ttls_by_value, time_elapsed = timed do
+        @servers.map { |s| s.get_remaining_ttl(resource) }
+          .select(&:first)
+          .group_by(&:first)
+          .transform_values { |ttl_tuples| ttl_tuples.map { |t| t[1] } }
       end
 
-      if ttls.size >= @quorum
+      # Authoritative lock value is that which is returned by the majority of
+      # servers
+      authoritative_value, ttls =
+        ttls_by_value.max_by { |(lock_value, ttls)| ttls.length }
+
+      if ttls && ttls.size >= @quorum
         min_ttl = ttls.sort.last(@quorum).min
-        min_ttl - time_elapsed - drift(min_ttl)
+        min_ttl = min_ttl - time_elapsed - drift(min_ttl)
+        { value: authoritative_value, ttl: min_ttl }
       else
-        # TODO: This nil is overloaded, it could mean that we did not find the
-        # value, or that we could not achieve quorum. Maybe we want to do
-        # something different in the latter case?
+        # No lock_value is authoritatively held for the resource
         nil
       end
     end
