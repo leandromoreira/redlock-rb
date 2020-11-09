@@ -387,7 +387,7 @@ RSpec.describe Redlock::Client do
           ttl = 20_000
           @lock_info = redlock.lock(resource_key, ttl)
 
-          # Mock redis server responses to return different tts
+          # Mock redis server responses to return different ttls
           returned_ttls = [20_000, 10_000]
           redlock.instance_variable_get(:@servers).each_with_index do |server, index|
             allow(server).to(receive(:get_remaining_ttl))

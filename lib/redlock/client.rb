@@ -282,10 +282,11 @@ module Redlock
     end
 
     def try_get_remaining_ttl(resource)
-      # Responses from the servers are either nil, or a 2 tuple of format
-      # [lock_value, ttl]. Since servers may have different lock values, the
-      # responses are grouped by the lock_value and transofrmed into a hash:
-      # { lock_value1 => [ttl1, ttl2, ttl3], lock_value2 => [ttl4, tt5] }
+      # Responses from the servers are a 2 tuple of format [lock_value, ttl].
+      # The lock_value is nil if it does not exist. Since servers may have
+      # different lock values, the responses are grouped by the lock_value and
+      # transofrmed into a hash: { lock_value1 => [ttl1, ttl2, ttl3],
+      # lock_value2 => [ttl4, tt5] }
       ttls_by_value, time_elapsed = timed do
         @servers.map { |s| s.get_remaining_ttl(resource) }
           .select(&:first)
