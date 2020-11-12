@@ -16,6 +16,13 @@ RSpec.describe Redlock::Client do
   let(:redis2_port) { ENV["REDIS2_PORT"] || "6379" }
   let(:redis3_host) { ENV["REDIS3_HOST"] || "127.0.0.1" }
   let(:redis3_port) { ENV["REDIS3_PORT"] || "6379" }
+  let(:unreachable_redis) {
+    redis = Redis.new(url: 'redis://localhost:46864')
+    def redis.with
+      yield self
+    end
+    redis
+  }
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
@@ -212,14 +219,6 @@ RSpec.describe Redlock::Client do
         redis_instance.instance_variable_set(:@redis, old_redis)
         expect(lock_manager.lock(resource_key, ttl)).to be_truthy
       end
-    end
-
-    def unreachable_redis
-      redis = Redis.new(url: 'redis://localhost:46864')
-      def redis.with
-        yield self
-      end
-      redis
     end
 
     context 'when script cache has been flushed' do
@@ -419,7 +418,45 @@ RSpec.describe Redlock::Client do
         expect(remaining_ttl).to be_nil
       end
     end
+
+    context 'when server goes away' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'does not raise an error on connection issues' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+
+        # Replace redis with unreachable instance
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        old_redis = redis_instance.instance_variable_get(:@redis)
+        redis_instance.instance_variable_set(:@redis, unreachable_redis)
+
+        expect {
+          remaining_ttl = lock_manager.get_remaining_ttl_for_resource(resource_key)
+          expect(remaining_ttl).to be_nil
+        }.to_not raise_error
+      end
+    end
+
+    context 'when a server comes back' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'recovers from connection issues' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+
+        # Replace redis with unreachable instance
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        old_redis = redis_instance.instance_variable_get(:@redis)
+        redis_instance.instance_variable_set(:@redis, unreachable_redis)
+
+        expect(lock_manager.get_remaining_ttl_for_resource(resource_key)).to be_nil
+
+        # Restore redis
+        redis_instance.instance_variable_set(:@redis, old_redis)
+        expect(lock_manager.get_remaining_ttl_for_resource(resource_key)).to be_truthy
+      end
+    end
   end
+
   describe 'get_remaining_ttl_for_lock' do
     context 'when lock is valid' do
       it 'gets the remaining ttl of a lock' do

@@ -286,9 +286,9 @@ module Redlock
       # lock_value2 => [ttl4, tt5] }
       ttls_by_value, time_elapsed = timed do
         @servers.map { |s| s.get_remaining_ttl(resource) }
-          .select(&:first)
+          .select { |ttl_tuple| ttl_tuple&.first }
           .group_by(&:first)
-          .transform_values { |ttl_tuples| ttl_tuples.map { |t| t[1] } }
+          .transform_values { |ttl_tuples| ttl_tuples.map { |t| t.last } }
       end
 
       # Authoritative lock value is that which is returned by the majority of
