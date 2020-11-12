@@ -106,7 +106,6 @@ module Redlock
     # currently holds the lock and it has not expired, otherwise the method
     # returns nil.
     # Params:
-    # +resource+:: the name of the resource (string) for which to check the ttl
     # +lock_info+:: the lock that has been acquired when you locked the resource
     def get_remaining_ttl_for_lock(lock_info)
       ttl_info = try_get_remaining_ttl(lock_info[:resource])
@@ -161,9 +160,7 @@ module Redlock
       eos
 
       PTTL_SCRIPT = <<-eos
-        if redis.call("exists", KEYS[1]) then
-          return { redis.call("get", KEYS[1]), redis.call("pttl", KEYS[1]) }
-        end
+        return { redis.call("get", KEYS[1]), redis.call("pttl", KEYS[1]) }
       eos
 
       module ConnectionPoolLike
@@ -303,7 +300,7 @@ module Redlock
         # Return the  minimum TTL of an N/2+1 selection. It will always be
         # correct (it will guarantee that at least N/2+1 servers have a TTL that
         # value or longer)
-        min_ttl = ttls.sort.last(@quorum).min
+        min_ttl = ttls.sort.last(@quorum).first
         min_ttl = min_ttl - time_elapsed - drift(min_ttl)
         { value: authoritative_value, ttl: min_ttl }
       else

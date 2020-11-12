@@ -14,6 +14,8 @@ RSpec.describe Redlock::Client do
   let(:redis1_port) { ENV["REDIS1_PORT"] || "6379" }
   let(:redis2_host) { ENV["REDIS2_HOST"] || "127.0.0.1" }
   let(:redis2_port) { ENV["REDIS2_PORT"] || "6379" }
+  let(:redis3_host) { ENV["REDIS3_HOST"] || "127.0.0.1" }
+  let(:redis3_port) { ENV["REDIS3_PORT"] || "6379" }
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
@@ -379,7 +381,13 @@ RSpec.describe Redlock::Client do
       end
 
       context 'when servers respond with varying ttls' do
-        let (:servers) { ["redis://#{redis1_host}:#{redis1_port}", "redis://#{redis2_host}:#{redis2_port}"] }
+        let (:servers) {
+          [
+            "redis://#{redis1_host}:#{redis1_port}",
+            "redis://#{redis2_host}:#{redis2_port}",
+            "redis://#{redis3_host}:#{redis3_port}"
+          ]
+        }
         let (:redlock) { Redlock::Client.new(servers) }
         after(:each) { redlock.unlock(@lock_info) if @lock_info }
 
@@ -388,7 +396,7 @@ RSpec.describe Redlock::Client do
           @lock_info = redlock.lock(resource_key, ttl)
 
           # Mock redis server responses to return different ttls
-          returned_ttls = [20_000, 10_000]
+          returned_ttls = [20_000, 15_000, 10_000]
           redlock.instance_variable_get(:@servers).each_with_index do |server, index|
             allow(server).to(receive(:get_remaining_ttl))
               .with(resource_key)
@@ -397,9 +405,8 @@ RSpec.describe Redlock::Client do
 
           remaining_ttl = redlock.get_remaining_ttl_for_lock(@lock_info)
 
-          # Assert that the TTL is closer to the lower value than the higher one
-          expect(remaining_ttl).not_to be_within(300).of(returned_ttls.max)
-          expect(remaining_ttl).to be_within(300).of(returned_ttls.min)
+          # Assert that the TTL is closest to the closest to the correct value
+          expect(remaining_ttl).to be_within(300).of(returned_ttls[1])
         end
       end
     end
