@@ -7,13 +7,22 @@ RSpec.describe Redlock::Client do
   # It is recommended to have at least 3 servers in production
   let(:lock_manager_opts) { { retry_count: 3 } }
   let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS, lock_manager_opts) }
-  let(:redis_client) { Redis.new }
+  let(:redis_client) { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
   let(:redis1_host) { ENV["REDIS1_HOST"] || "localhost" }
   let(:redis1_port) { ENV["REDIS1_PORT"] || "6379" }
   let(:redis2_host) { ENV["REDIS2_HOST"] || "127.0.0.1" }
   let(:redis2_port) { ENV["REDIS2_PORT"] || "6379" }
+  let(:redis3_host) { ENV["REDIS3_HOST"] || "127.0.0.1" }
+  let(:redis3_port) { ENV["REDIS3_PORT"] || "6379" }
+  let(:unreachable_redis) {
+    redis = Redis.new(url: 'redis://localhost:46864')
+    def redis.with
+      yield self
+    end
+    redis
+  }
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
@@ -212,14 +221,6 @@ RSpec.describe Redlock::Client do
       end
     end
 
-    def unreachable_redis
-      redis = Redis.new(url: 'redis://localhost:46864')
-      def redis.with
-        yield self
-      end
-      redis
-    end
-
     context 'when script cache has been flushed' do
       before(:each) do
         @manipulated_instance = lock_manager.instance_variable_get(:@servers).first
@@ -363,6 +364,154 @@ RSpec.describe Redlock::Client do
           rescue Redlock::LockError
           end
         end.to_not raise_error
+      end
+    end
+  end
+
+  describe 'get_remaining_ttl_for_resource' do
+    context 'when lock is valid' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'gets the remaining ttl of a lock' do
+        ttl = 20_000
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_resource(resource_key)
+        expect(remaining_ttl).to be_within(300).of(ttl)
+      end
+
+      context 'when servers respond with varying ttls' do
+        let (:servers) {
+          [
+            "redis://#{redis1_host}:#{redis1_port}",
+            "redis://#{redis2_host}:#{redis2_port}",
+            "redis://#{redis3_host}:#{redis3_port}"
+          ]
+        }
+        let (:redlock) { Redlock::Client.new(servers) }
+        after(:each) { redlock.unlock(@lock_info) if @lock_info }
+
+        it 'returns the minimum ttl value' do
+          ttl = 20_000
+          @lock_info = redlock.lock(resource_key, ttl)
+
+          # Mock redis server responses to return different ttls
+          returned_ttls = [20_000, 15_000, 10_000]
+          redlock.instance_variable_get(:@servers).each_with_index do |server, index|
+            allow(server).to(receive(:get_remaining_ttl))
+              .with(resource_key)
+              .and_return([@lock_info[:value], returned_ttls[index]])
+          end
+
+          remaining_ttl = redlock.get_remaining_ttl_for_lock(@lock_info)
+
+          # Assert that the TTL is closest to the closest to the correct value
+          expect(remaining_ttl).to be_within(300).of(returned_ttls[1])
+        end
+      end
+    end
+
+    context 'when lock is not valid' do
+      it 'returns nil' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_resource(resource_key)
+        expect(remaining_ttl).to be_nil
+      end
+    end
+
+    context 'when server goes away' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'does not raise an error on connection issues' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+
+        # Replace redis with unreachable instance
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        old_redis = redis_instance.instance_variable_get(:@redis)
+        redis_instance.instance_variable_set(:@redis, unreachable_redis)
+
+        expect {
+          remaining_ttl = lock_manager.get_remaining_ttl_for_resource(resource_key)
+          expect(remaining_ttl).to be_nil
+        }.to_not raise_error
+      end
+    end
+
+    context 'when a server comes back' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'recovers from connection issues' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+
+        # Replace redis with unreachable instance
+        redis_instance = lock_manager.instance_variable_get(:@servers).first
+        old_redis = redis_instance.instance_variable_get(:@redis)
+        redis_instance.instance_variable_set(:@redis, unreachable_redis)
+
+        expect(lock_manager.get_remaining_ttl_for_resource(resource_key)).to be_nil
+
+        # Restore redis
+        redis_instance.instance_variable_set(:@redis, old_redis)
+        expect(lock_manager.get_remaining_ttl_for_resource(resource_key)).to be_truthy
+      end
+    end
+  end
+
+  describe 'get_remaining_ttl_for_lock' do
+    context 'when lock is valid' do
+      it 'gets the remaining ttl of a lock' do
+        ttl = 20_000
+        lock_info = lock_manager.lock(resource_key, ttl)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_lock(lock_info)
+        expect(remaining_ttl).to be_within(300).of(ttl)
+        lock_manager.unlock(lock_info)
+      end
+    end
+
+    context 'when lock is not valid' do
+      it 'returns nil' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        remaining_ttl = lock_manager.get_remaining_ttl_for_lock(lock_info)
+        expect(remaining_ttl).to be_nil
+      end
+    end
+  end
+
+  describe 'locked?' do
+    context 'when lock is available' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'returns true' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        expect(lock_manager).to be_locked(resource_key)
+      end
+    end
+
+    context 'when lock is not available' do
+      it 'returns false' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        expect(lock_manager).not_to be_locked(resource_key)
+      end
+    end
+  end
+
+  describe 'valid_lock?' do
+    context 'when lock is available' do
+      after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
+
+      it 'returns true' do
+        @lock_info = lock_manager.lock(resource_key, ttl)
+        expect(lock_manager).to be_valid_lock(@lock_info)
+      end
+    end
+
+    context 'when lock is not available' do
+      it 'returns false' do
+        lock_info = lock_manager.lock(resource_key, ttl)
+        lock_manager.unlock(lock_info)
+        expect(lock_manager).not_to be_valid_lock(lock_info)
       end
     end
   end

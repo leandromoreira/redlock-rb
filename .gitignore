@@ -1,3 +1,5 @@
 *.gem
 coverage/
 .bundle/
+Gemfile.lock
+dump.rdb

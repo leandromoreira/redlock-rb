@@ -102,6 +102,43 @@ module Redlock
       end
     end
 
+    # Gets remaining ttl of a resource. The ttl is returned if the holder
+    # currently holds the lock and it has not expired, otherwise the method
+    # returns nil.
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource
+    def get_remaining_ttl_for_lock(lock_info)
+      ttl_info = try_get_remaining_ttl(lock_info[:resource])
+      return nil if ttl_info.nil? || ttl_info[:value] != lock_info[:value]
+      ttl_info[:ttl]
+    end
+
+    # Gets remaining ttl of a resource. If there is no valid lock, the method
+    # returns nil.
+    # Params:
+    # +resource+:: the name of the resource (string) for which to check the ttl
+    def get_remaining_ttl_for_resource(resource)
+      ttl_info = try_get_remaining_ttl(resource)
+      return nil if ttl_info.nil?
+      ttl_info[:ttl]
+    end
+
+    # Checks if a resource is locked
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource
+    def locked?(resource)
+      ttl = get_remaining_ttl_for_resource(resource)
+      !(ttl.nil? || ttl.zero?)
+    end
+
+    # Checks if a lock is still valid
+    # Params:
+    # +lock_info+:: the lock that has been acquired when you locked the resource
+    def valid_lock?(lock_info)
+      ttl = get_remaining_ttl_for_lock(lock_info)
+      !(ttl.nil? || ttl.zero?)
+    end
+
     private
 
     class RedisInstance
@@ -120,6 +157,10 @@ module Redlock
         if (redis.call("exists", KEYS[1]) == 0 and ARGV[3] == "yes") or redis.call("get", KEYS[1]) == ARGV[1] then
           return redis.call("set", KEYS[1], ARGV[1], "PX", ARGV[2])
         end
+      eos
+
+      PTTL_SCRIPT = <<-eos
+        return { redis.call("get", KEYS[1]), redis.call("pttl", KEYS[1]) }
       eos
 
       module ConnectionPoolLike
@@ -159,11 +200,20 @@ module Redlock
         # Nothing to do, unlocking is just a best-effort attempt.
       end
 
+      def get_remaining_ttl(resource)
+        recover_from_script_flush do
+          @redis.with { |conn| conn.evalsha @pttl_script_sha, keys: [resource] }
+        end
+      rescue Redis::BaseConnectionError
+        nil
+      end
+
       private
 
       def load_scripts
         @unlock_script_sha = @redis.with { |conn| conn.script(:load, UNLOCK_SCRIPT) }
         @lock_script_sha = @redis.with { |conn| conn.script(:load, LOCK_SCRIPT) }
+        @pttl_script_sha = @redis.with { |conn| conn.script(:load, PTTL_SCRIPT) }
       end
 
       def recover_from_script_flush
@@ -225,6 +275,37 @@ module Redlock
       else
         @servers.each { |s| s.unlock(resource, value) }
         false
+      end
+    end
+
+    def try_get_remaining_ttl(resource)
+      # Responses from the servers are a 2 tuple of format [lock_value, ttl].
+      # The lock_value is nil if it does not exist. Since servers may have
+      # different lock values, the responses are grouped by the lock_value and
+      # transofrmed into a hash: { lock_value1 => [ttl1, ttl2, ttl3],
+      # lock_value2 => [ttl4, tt5] }
+      ttls_by_value, time_elapsed = timed do
+        @servers.map { |s| s.get_remaining_ttl(resource) }
+          .select { |ttl_tuple| ttl_tuple&.first }
+          .group_by(&:first)
+          .transform_values { |ttl_tuples| ttl_tuples.map { |t| t.last } }
+      end
+
+      # Authoritative lock value is that which is returned by the majority of
+      # servers
+      authoritative_value, ttls =
+        ttls_by_value.max_by { |(lock_value, ttls)| ttls.length }
+
+      if ttls && ttls.size >= @quorum
+        # Return the  minimum TTL of an N/2+1 selection. It will always be
+        # correct (it will guarantee that at least N/2+1 servers have a TTL that
+        # value or longer)
+        min_ttl = ttls.sort.last(@quorum).first
+        min_ttl = min_ttl - time_elapsed - drift(min_ttl)
+        { value: authoritative_value, ttl: min_ttl }
+      else
+        # No lock_value is authoritatively held for the resource
+        nil
       end
     end
 
