@@ -7,3 +7,6 @@ build:
 
 publish:
 	docker-compose run --rm test gem push `ls -lt *gem | head -n 1 | awk '{ print $$9 }'`
+
+updateLock:
+	docker-compose run --rm test bundle lock --update
