@@ -40,9 +40,9 @@ RSpec.describe Redlock::Client do
       pool = ConnectionPool.new { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
       redlock = Redlock::Client.new([pool])
 
-      lock_info = lock_manager.lock(resource_key, ttl)
+      lock_info = redlock.lock(resource_key, ttl)
       expect(resource_key).to_not be_lockable(lock_manager, ttl)
-      lock_manager.unlock(lock_info)
+      redlock.unlock(lock_info)
     end
   end
 
