@@ -44,6 +44,15 @@ RSpec.describe Redlock::Client do
       expect(resource_key).to_not be_lockable(lock_manager, ttl)
       lock_manager.unlock(lock_info)
     end
+
+    it 'does not load scripts' do
+      redis_client.script(:flush)
+
+      pool = ConnectionPool.new { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
+      redlock = Redlock::Client.new([pool])
+
+      expect(redis_client.info["number_of_cached_scripts"]).to eq("0")
+    end
   end
 
   describe 'lock' do

@@ -1,5 +1,6 @@
 require 'redis'
 require 'securerandom'
+require 'digest'
 
 module Redlock
   class Client
@@ -181,7 +182,7 @@ module Redlock
           @redis.extend(ConnectionPoolLike)
         end
 
-        load_scripts
+        generate_script_shas
       end
 
       def lock(resource, val, ttl, allow_new_lock)
@@ -210,10 +211,16 @@ module Redlock
 
       private
 
+      def generate_script_shas
+        @unlock_script_sha = Digest::SHA1.hexdigest(UNLOCK_SCRIPT)
+        @lock_script_sha   = Digest::SHA1.hexdigest(LOCK_SCRIPT)
+        @pttl_script_sha   = Digest::SHA1.hexdigest(PTTL_SCRIPT)
+      end
+
       def load_scripts
-        @unlock_script_sha = @redis.with { |conn| conn.script(:load, UNLOCK_SCRIPT) }
-        @lock_script_sha = @redis.with { |conn| conn.script(:load, LOCK_SCRIPT) }
-        @pttl_script_sha = @redis.with { |conn| conn.script(:load, PTTL_SCRIPT) }
+        [UNLOCK_SCRIPT, LOCK_SCRIPT, PTTL_SCRIPT].each do |script|
+          @redis.with { |conn| conn.script(:load, script) }
+        end
       end
 
       def recover_from_script_flush
