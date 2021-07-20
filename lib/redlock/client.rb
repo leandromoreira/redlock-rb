@@ -1,6 +1,5 @@
 require 'redis'
 require 'securerandom'
-require 'digest'
 
 module Redlock
   include Scripts

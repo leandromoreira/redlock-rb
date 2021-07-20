@@ -1,3 +1,5 @@
+require 'digest'
+
 module Redlock
   module Scripts
     UNLOCK_SCRIPT = <<-eos
