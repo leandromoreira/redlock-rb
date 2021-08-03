@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/leandromoreira/redlock-rb.svg?branch=master)](https://travis-ci.org/leandromoreira/redlock-rb)
+[![Build Status](https://github.com/leandromoreira/redlock-rb/actions/workflows/ci.yml/badge.svg)](https://github.com/leandromoreira/redlock-rb/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/leandromoreira/redlock-rb/badge.svg?branch=master)](https://coveralls.io/r/leandromoreira/redlock-rb?branch=master)
 [![Code Climate](https://codeclimate.com/github/leandromoreira/redlock-rb/badges/gpa.svg)](https://codeclimate.com/github/leandromoreira/redlock-rb)
 [![Gem Version](https://badge.fury.io/rb/redlock.svg)](http://badge.fury.io/rb/redlock)
