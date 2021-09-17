@@ -51,7 +51,7 @@ RSpec.describe Redlock::Client do
       pool = ConnectionPool.new { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
       redlock = Redlock::Client.new([pool])
 
-      expect(redis_client.info["number_of_cached_scripts"]).to eq(nil)
+      expect(redis_client.info["number_of_cached_scripts"]).to eq("0")
     end
   end
 
