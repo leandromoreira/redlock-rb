@@ -56,6 +56,9 @@ module Redlock
     # +resource+:: the resource (or key) string to be locked.
     # +ttl+:: The time-to-live in ms for the lock.
     # +options+:: Hash of optional parameters
+    #  * +retry_count+: see +initialize+
+    #  * +retry_delay+: see +initialize+
+    #  * +retry_jitter+: see +initialize+
     #  * +extend+: A lock ("lock_info") to extend.
     #  * +extend_only_if_locked+: Boolean, if +extend+ is given, only acquire lock if currently held
     #  * +extend_only_if_life+: Deprecated, same as +extend_only_if_locked+
