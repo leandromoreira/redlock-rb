@@ -204,6 +204,41 @@ RSpec.describe Redlock::Client do
         lock_manager.lock(resource_key, ttl)
         lock_manager.unlock(another_lock_info)
       end
+
+      context 'when retry_count is given' do
+        it 'prioritizes the retry_count in option and tries up to \'retry_count\' + 1 times' do
+          retry_count = 1
+          expect(retry_count).not_to eq(lock_manager_opts[:retry_count])
+          expect(lock_manager).to receive(:lock_instances).exactly(retry_count + 1).times.and_return(false)
+          lock_manager.lock(resource_key, ttl, retry_count: retry_count)
+        end
+      end
+
+      context 'when retry_delay is given' do
+        it 'prioritizes the retry_delay in option and sleeps at least the specified retry_delay in milliseconds' do
+          retry_delay = 300
+          expect(retry_delay > described_class::DEFAULT_RETRY_DELAY).to eq(true)
+          expected_minimum = retry_delay
+
+          expect(lock_manager).to receive(:sleep) do |sleep|
+            expect(sleep).to satisfy { |value| value >= expected_minimum / 1000.to_f }
+          end.at_least(:once)
+          lock_manager.lock(resource_key, ttl, retry_delay: retry_delay)
+        end
+      end
+
+      context 'when retry_jitter is given' do
+        it 'prioritizes the retry_jitter in option and sleeps a maximum of retry_delay + retry_jitter in milliseconds' do
+          retry_jitter = 60
+          expect(retry_jitter > described_class::DEFAULT_RETRY_JITTER).to eq(true)
+
+          expected_maximum = described_class::DEFAULT_RETRY_DELAY + retry_jitter
+          expect(lock_manager).to receive(:sleep) do |sleep|
+            expect(sleep).to satisfy { |value| value < expected_maximum / 1000.to_f }
+          end.at_least(:once)
+          lock_manager.lock(resource_key, ttl, retry_jitter: retry_jitter)
+        end
+      end
     end
 
     context 'when a server goes away' do
