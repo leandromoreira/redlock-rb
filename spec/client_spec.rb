@@ -242,14 +242,14 @@ RSpec.describe Redlock::Client do
     end
 
     context 'when a server goes away' do
-      it 'does not raise an error on connection issues' do
-        # We re-route the lock manager to a (hopefully) non-existent Redis URL.
+      it 'raises an error on connection issues' do
+        # Set lock manager to a (hopefully) non-existent Redis URL to test error
         redis_instance = lock_manager.instance_variable_get(:@servers).first
         redis_instance.instance_variable_set(:@redis, unreachable_redis)
 
         expect {
-          expect(lock_manager.lock(resource_key, ttl)).to be_falsey
-        }.to_not raise_error
+          lock_manager.lock(resource_key, ttl)
+        }.to raise_error(Redis::CannotConnectError)
       end
     end
 
@@ -259,7 +259,9 @@ RSpec.describe Redlock::Client do
         redis_instance = lock_manager.instance_variable_get(:@servers).first
         old_redis = redis_instance.instance_variable_get(:@redis)
         redis_instance.instance_variable_set(:@redis, unreachable_redis)
-        expect(lock_manager.lock(resource_key, ttl)).to be_falsey
+        expect {
+          lock_manager.lock(resource_key, ttl)
+        }.to raise_error(Redis::CannotConnectError)
         redis_instance.instance_variable_set(:@redis, old_redis)
         expect(lock_manager.lock(resource_key, ttl)).to be_truthy
       end

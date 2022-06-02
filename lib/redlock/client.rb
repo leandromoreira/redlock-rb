@@ -170,8 +170,6 @@ module Redlock
         recover_from_script_flush do
           @redis.with { |conn| conn.evalsha Scripts::LOCK_SCRIPT_SHA, keys: [resource], argv: [val, ttl, allow_new_lock] }
         end
-      rescue Redis::BaseConnectionError
-        false
       end
 
       def unlock(resource, val)
