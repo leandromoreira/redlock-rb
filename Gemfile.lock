@@ -1,13 +1,13 @@
 PATH
   remote: .
   specs:
-    redlock (1.3.0)
+    redlock (1.3.1)
       redis (>= 3.0.0, < 6.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    connection_pool (2.2.5)
+    connection_pool (2.3.0)
     coveralls (0.8.23)
       json (>= 1.8, < 3)
       simplecov (~> 0.16.1)
@@ -18,9 +18,9 @@ GEM
     docile (1.4.0)
     json (2.3.1)
     rake (13.0.6)
-    redis (5.0.2)
-      redis-client (~> 0.7)
-    redis-client (0.7.3)
+    redis (5.0.5)
+      redis-client (>= 0.9.0)
+    redis-client (0.10.0)
       connection_pool
     rspec (3.11.0)
       rspec-core (~> 3.11.0)
@@ -28,13 +28,13 @@ GEM
       rspec-mocks (~> 3.11.0)
     rspec-core (3.11.0)
       rspec-support (~> 3.11.0)
-    rspec-expectations (3.11.0)
+    rspec-expectations (3.11.1)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.11.0)
     rspec-mocks (3.11.1)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.11.0)
-    rspec-support (3.11.0)
+    rspec-support (3.11.1)
     simplecov (0.16.1)
       docile (~> 1.1)
       json (>= 1.8, < 3)
