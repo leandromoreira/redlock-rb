@@ -168,13 +168,13 @@ module Redlock
 
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.with { |conn| conn.evalsha Scripts::LOCK_SCRIPT_SHA, keys: [resource], argv: [val, ttl, allow_new_lock] }
+          @redis.with { |conn| conn.evalsha Scripts::LOCK_SCRIPT_SHA, [resource], [val, ttl, allow_new_lock] }
         end
       end
 
       def unlock(resource, val)
         recover_from_script_flush do
-          @redis.with { |conn| conn.evalsha Scripts::UNLOCK_SCRIPT_SHA, keys: [resource], argv: [val] }
+          @redis.with { |conn| conn.evalsha Scripts::UNLOCK_SCRIPT_SHA, [resource], [val] }
         end
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
