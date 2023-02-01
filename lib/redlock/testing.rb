@@ -41,7 +41,7 @@ module Redlock
 
       def load_scripts
         load_scripts_without_testing unless Redlock::Client.testing_mode == :bypass
-      rescue Redis::CommandError
+      rescue RedisClient::CommandError
         # FakeRedis doesn't have #script, but doesn't need it either.
         raise unless defined?(::FakeRedis)
       rescue NoMethodError

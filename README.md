@@ -151,7 +151,7 @@ lock_manager.get_remaining_ttl_for_lock(lock_info)
 
 lock_manager.unlock(lock_info)
 lock_manager.get_remaining_ttl_for_lock(lock_info)
-#=> nil 
+#=> nil
 ```
 
 Use `get_remaining_ttl_for_resource` if you do not hold a lock, but want to know the remaining TTL on a locked resource:
@@ -164,13 +164,13 @@ lock_info = lock_manager.lock(resource, 2000)
 lock_manager.locked?(resource)
 #=> true
 lock_manager.get_remaining_ttl_for_resource(resource)
-#=> 1975 
+#=> 1975
 
 # Sometime later
 lock_manager.locked?(resource)
 #=> false
 lock_manager.get_remaining_ttl_for_resource(resource)
-#=> nil 
+#=> nil
 ```
 
 ## Redis client configuration
@@ -178,7 +178,7 @@ lock_manager.get_remaining_ttl_for_resource(resource)
 `Redlock::Client` expects URLs or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
 
 ```ruby
-servers = [ 'redis://localhost:6379', Redis.new(:url => 'redis://someotherhost:6379') ]
+servers = [ 'redis://localhost:6379', RedisClient.new(:url => 'redis://someotherhost:6379') ]
 redlock = Redlock::Client.new(servers)
 ```
 

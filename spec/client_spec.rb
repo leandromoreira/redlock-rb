@@ -1,13 +1,12 @@
 require 'spec_helper'
 require 'securerandom'
-require 'redis'
 require 'connection_pool'
 
 RSpec.describe Redlock::Client do
   # It is recommended to have at least 3 servers in production
   let(:lock_manager_opts) { { retry_count: 3 } }
   let(:lock_manager) { Redlock::Client.new(Redlock::Client::DEFAULT_REDIS_URLS, lock_manager_opts) }
-  let(:redis_client) { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
+  let(:redis_client) { RedisClient.new(url: "redis://#{redis1_host}:#{redis1_port}") }
   let(:resource_key) { SecureRandom.hex(3)  }
   let(:ttl) { 1000 }
   let(:redis1_host) { ENV["REDIS1_HOST"] || "localhost" }
@@ -17,7 +16,7 @@ RSpec.describe Redlock::Client do
   let(:redis3_host) { ENV["REDIS3_HOST"] || "127.0.0.1" }
   let(:redis3_port) { ENV["REDIS3_PORT"] || "6379" }
   let(:unreachable_redis) {
-    redis = Redis.new(url: 'redis://localhost:46864')
+    redis = RedisClient.new(url: 'redis://localhost:46864')
     def redis.with
       yield self
     end
@@ -26,7 +25,7 @@ RSpec.describe Redlock::Client do
 
   describe 'initialize' do
     it 'accepts both redis URLs and Redis objects' do
-      servers = [ "redis://#{redis1_host}:#{redis1_port}", Redis.new(url: "redis://#{redis2_host}:#{redis2_port}") ]
+      servers = [ "redis://#{redis1_host}:#{redis1_port}", RedisClient.new(url: "redis://#{redis2_host}:#{redis2_port}") ]
       redlock = Redlock::Client.new(servers)
 
       redlock_servers = redlock.instance_variable_get(:@servers).map do |s|
@@ -37,7 +36,7 @@ RSpec.describe Redlock::Client do
     end
 
     it 'accepts ConnectionPool objects' do
-      pool = ConnectionPool.new { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
+      pool = ConnectionPool.new { RedisClient.new(url: "redis://#{redis1_host}:#{redis1_port}") }
       redlock = Redlock::Client.new([pool])
 
       lock_info = lock_manager.lock(resource_key, ttl)
@@ -46,12 +45,15 @@ RSpec.describe Redlock::Client do
     end
 
     it 'does not load scripts' do
-      redis_client.script(:flush)
+      redis_client.call('SCRIPT', 'FLUSH')
 
-      pool = ConnectionPool.new { Redis.new(url: "redis://#{redis1_host}:#{redis1_port}") }
+      pool = ConnectionPool.new { RedisClient.new(url: "redis://#{redis1_host}:#{redis1_port}") }
       redlock = Redlock::Client.new([pool])
 
-      expect(redis_client.info["number_of_cached_scripts"]).to eq("0")
+      raw_info = redis_client.call('INFO')
+      number_of_cached_scripts = raw_info[/number_of_cached_scripts\:\d+/].split(':').last
+
+      expect(number_of_cached_scripts).to eq("0")
     end
   end
 
@@ -74,7 +76,7 @@ RSpec.describe Redlock::Client do
       it 'interprets lock time as milliseconds' do
         ttl = 20000
         @lock_info = lock_manager.lock(resource_key, ttl)
-        expect(redis_client.pttl(resource_key)).to be_within(200).of(ttl)
+        expect(redis_client.call('PTTL', resource_key)).to be_within(200).of(ttl)
       end
 
       it 'can extend its own lock' do
@@ -106,7 +108,7 @@ RSpec.describe Redlock::Client do
 
         lock_info = lock_manager.lock(resource_key, ttl, extend: lock_info, extend_only_if_locked: true)
         expect(lock_info).not_to be_nil
-        expect(redis_client.pttl(resource_key)).to be_within(200).of(ttl)
+        expect(redis_client.call('PTTL', resource_key)).to be_within(200).of(ttl)
       end
 
       context 'when extend_only_if_locked flag is not given' do
@@ -249,7 +251,7 @@ RSpec.describe Redlock::Client do
 
         expect {
           lock_manager.lock(resource_key, ttl)
-        }.to raise_error(Redis::CannotConnectError)
+        }.to raise_error(RedisClient::CannotConnectError)
       end
     end
 
@@ -261,7 +263,7 @@ RSpec.describe Redlock::Client do
         redis_instance.instance_variable_set(:@redis, unreachable_redis)
         expect {
           lock_manager.lock(resource_key, ttl)
-        }.to raise_error(Redis::CannotConnectError)
+        }.to raise_error(RedisClient::CannotConnectError)
         redis_instance.instance_variable_set(:@redis, old_redis)
         expect(lock_manager.lock(resource_key, ttl)).to be_truthy
       end
@@ -270,10 +272,10 @@ RSpec.describe Redlock::Client do
     context 'when script cache has been flushed' do
       before(:each) do
         @manipulated_instance = lock_manager.instance_variable_get(:@servers).first
-        @manipulated_instance.instance_variable_get(:@redis).script(:flush)
+        @manipulated_instance.instance_variable_get(:@redis).call('SCRIPT', 'FLUSH')
       end
 
-      it 'does not raise a Redis::CommandError: NOSCRIPT error' do
+      it 'does not raise a RedisClient::CommandError: NOSCRIPT error' do
         expect {
           lock_manager.lock(resource_key, ttl)
         }.to_not raise_error
