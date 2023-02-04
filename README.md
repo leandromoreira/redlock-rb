@@ -15,7 +15,7 @@ This is an implementation of a proposed [distributed lock algorithm with Redis](
 
 ## Compatibility
 
-Redlock works with Redis versions 2.6 or later.
+Redlock works with Redis versions 6.0 or later.
 
 ## Installation
 
