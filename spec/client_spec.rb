@@ -29,7 +29,7 @@ RSpec.describe Redlock::Client do
       redlock = Redlock::Client.new(servers)
 
       redlock_servers = redlock.instance_variable_get(:@servers).map do |s|
-        s.instance_variable_get(:@redis).connection[:host]
+        s.instance_variable_get(:@redis).config.host
       end
 
       expect(redlock_servers).to match_array([redis1_host, redis2_host])
