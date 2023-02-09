@@ -1,4 +1,4 @@
-require 'redis'
+require 'redis-client'
 require 'securerandom'
 
 module Redlock
@@ -160,7 +160,7 @@ module Redlock
           if connection.respond_to?(:client)
             @redis = connection
           else
-            @redis = Redis.new(connection)
+            @redis = RedisClient.new(connection)
           end
           @redis.extend(ConnectionPoolLike)
         end
@@ -168,13 +168,13 @@ module Redlock
 
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.with { |conn| conn.evalsha Scripts::LOCK_SCRIPT_SHA, [resource], [val, ttl, allow_new_lock] }
+          @redis.call('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
         end
       end
 
       def unlock(resource, val)
         recover_from_script_flush do
-          @redis.with { |conn| conn.evalsha Scripts::UNLOCK_SCRIPT_SHA, [resource], [val] }
+          @redis.call('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
         end
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
@@ -182,9 +182,9 @@ module Redlock
 
       def get_remaining_ttl(resource)
         recover_from_script_flush do
-          @redis.with { |conn| conn.evalsha Scripts::PTTL_SCRIPT_SHA, keys: [resource] }
+          @redis.call('EVALSHA', Scripts::PTTL_SCRIPT_SHA, 1, resource)
         end
-      rescue Redis::BaseConnectionError
+      rescue RedisClient::ConnectionError
         nil
       end
 
@@ -197,8 +197,10 @@ module Redlock
           Scripts::PTTL_SCRIPT
         ]
 
-        scripts.each do |script|
-          @redis.with { |conn| conn.script(:load, script) }
+        @redis.with do |connnection|
+          scripts.each do |script|
+            connnection.call('SCRIPT', 'LOAD', script)
+          end
         end
       end
 
@@ -206,7 +208,7 @@ module Redlock
         retry_on_noscript = true
         begin
           yield
-        rescue Redis::CommandError => e
+        rescue RedisClient::CommandError => e
           # When somebody has flushed the Redis instance's script cache, we might
           # want to reload our scripts. Only attempt this once, though, to avoid
           # going into an infinite loop.
