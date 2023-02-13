@@ -168,13 +168,17 @@ module Redlock
 
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.call('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
+          @redis.with { |conn|
+            conn.call('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
+          }
         end
       end
 
       def unlock(resource, val)
         recover_from_script_flush do
-          @redis.call('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
+          @redis.with { |conn|
+            conn.call('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
+          }
         end
       rescue
         # Nothing to do, unlocking is just a best-effort attempt.
@@ -182,7 +186,9 @@ module Redlock
 
       def get_remaining_ttl(resource)
         recover_from_script_flush do
-          @redis.call('EVALSHA', Scripts::PTTL_SCRIPT_SHA, 1, resource)
+          @redis.with { |conn|
+            conn.call('EVALSHA', Scripts::PTTL_SCRIPT_SHA, 1, resource)
+          }
         end
       rescue RedisClient::ConnectionError
         nil
