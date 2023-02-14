@@ -11,7 +11,7 @@ RSpec.describe Redlock::Client do
   describe '(testing mode)' do
     describe 'try_lock_instances' do
       context 'when testing with bypass mode' do
-        before { lock_manager.testing_mode = :bypass }
+        before { Redlock::Client.testing_mode = :bypass }
 
         it 'bypasses the redis servers' do
           expect(lock_manager).to_not receive(:try_lock_instances_without_testing)
@@ -22,7 +22,7 @@ RSpec.describe Redlock::Client do
       end
 
       context 'when testing with fail mode' do
-        before { lock_manager.testing_mode = :fail }
+        before { Redlock::Client.testing_mode = :fail }
 
         it 'fails' do
           expect(lock_manager).to_not receive(:try_lock_instances_without_testing)
@@ -33,7 +33,7 @@ RSpec.describe Redlock::Client do
       end
 
       context 'when testing is disabled' do
-        before { lock_manager.testing_mode = nil }
+        before { Redlock::Client.testing_mode = nil }
 
         it 'works as usual' do
           expect(lock_manager).to receive(:try_lock_instances_without_testing)
