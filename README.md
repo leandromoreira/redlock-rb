@@ -17,6 +17,8 @@ This is an implementation of a proposed [distributed lock algorithm with Redis](
 
 Redlock works with Redis versions 6.0 or later.
 
+Redlock >= 2.0 only works with `RedisClient` instance.
+
 ## Installation
 
 Add this line to your application's Gemfile:
