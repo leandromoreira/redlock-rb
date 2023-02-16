@@ -19,6 +19,9 @@ Redlock works with Redis versions 6.0 or later.
 
 Redlock >= 2.0 only works with `RedisClient` instance.
 
+If you'd like to enable auto-reconnect attempts like in Redis 5,
+be sure to instantiate a RedisClient with `reconnect_attempts: 1`.
+
 ## Installation
 
 Add this line to your application's Gemfile:

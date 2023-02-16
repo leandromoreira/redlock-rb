@@ -169,7 +169,8 @@ module Redlock
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
           @redis.with { |conn|
-            conn.call('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
+            # NOTE: is not idempotent and unsafe to retry
+            conn.call_once('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
           }
         end
       end
@@ -177,7 +178,8 @@ module Redlock
       def unlock(resource, val)
         recover_from_script_flush do
           @redis.with { |conn|
-            conn.call('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
+            # NOTE: is not idempotent and unsafe to retry
+            conn.call_once('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
           }
         end
       rescue
@@ -187,6 +189,7 @@ module Redlock
       def get_remaining_ttl(resource)
         recover_from_script_flush do
           @redis.with { |conn|
+            # NOTE: is idempotent and safe to retry
             conn.call('EVALSHA', Scripts::PTTL_SCRIPT_SHA, 1, resource)
           }
         end
@@ -205,6 +208,7 @@ module Redlock
 
         @redis.with do |connnection|
           scripts.each do |script|
+            # NOTE: is idempotent and safe to retry
             connnection.call('SCRIPT', 'LOAD', script)
           end
         end
