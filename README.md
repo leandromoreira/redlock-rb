@@ -15,9 +15,8 @@ This is an implementation of a proposed [distributed lock algorithm with Redis](
 
 ## Compatibility
 
-Redlock works with Redis versions 6.0 or later.
-
-Redlock >= 2.0 only works with `RedisClient` instance.
+* It works with Redis server versions 6.0 or later.
+* Redlock >= 2.0 only works with [`RedisClient`](https://github.com/redis-rb/redis-client) client instance.
 
 ## Installation
 
