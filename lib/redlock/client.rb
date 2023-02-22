@@ -44,7 +44,7 @@ module Redlock
           RedisInstance.new(server)
         end
       end
-      @quorum = (servers.length / 2).to_i + 1
+      @quorum = servers.length / 2 + 1
       @retry_count = options[:retry_count] || DEFAULT_RETRY_COUNT
       @retry_delay = options[:retry_delay] || DEFAULT_RETRY_DELAY
       @retry_jitter = options[:retry_jitter] || DEFAULT_RETRY_JITTER
@@ -262,8 +262,9 @@ module Redlock
       value = (options[:extend] || { value: SecureRandom.uuid })[:value]
       allow_new_lock = options[:extend_only_if_locked] ? 'no' : 'yes'
 
-      locked, time_elapsed = timed do
-        @servers.select { |s| s.lock resource, value, ttl, allow_new_lock }.size
+      locked = 0
+      time_elapsed = timed do
+        locked = @servers.count { |s| s.lock(resource, value, ttl, allow_new_lock) }
       end
 
       validity = ttl - time_elapsed - drift(ttl)
@@ -315,8 +316,9 @@ module Redlock
     end
 
     def timed
-      start_time = @time_source.call()
-      [yield, @time_source.call() - start_time]
+      start_time = @time_source.call
+      yield
+      @time_source.call - start_time
     end
   end
 end
