@@ -148,13 +148,13 @@ module Redlock
 
     class RedisInstance
       module ConnectionPoolLike
-        def with
+        def run_with
           yield self
         end
       end
 
       def initialize(connection)
-        if connection.respond_to?(:with)
+        if connection.respond_to?(:run_with)
           @redis = connection
         else
           if connection.respond_to?(:client)
@@ -168,7 +168,7 @@ module Redlock
 
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.with { |conn|
+          @redis.run_with { |conn|
             conn.call('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
           }
         end
@@ -176,7 +176,7 @@ module Redlock
 
       def unlock(resource, val)
         recover_from_script_flush do
-          @redis.with { |conn|
+          @redis.run_with { |conn|
             conn.call('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
           }
         end
@@ -186,7 +186,7 @@ module Redlock
 
       def get_remaining_ttl(resource)
         recover_from_script_flush do
-          @redis.with { |conn|
+          @redis.run_with { |conn|
             conn.call('EVALSHA', Scripts::PTTL_SCRIPT_SHA, 1, resource)
           }
         end
@@ -203,7 +203,7 @@ module Redlock
           Scripts::PTTL_SCRIPT
         ]
 
-        @redis.with do |connnection|
+        @redis.run_with do |connnection|
           scripts.each do |script|
             connnection.call('SCRIPT', 'LOAD', script)
           end
