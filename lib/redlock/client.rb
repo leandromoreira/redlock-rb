@@ -4,6 +4,15 @@ require 'securerandom'
 module Redlock
   include Scripts
 
+  class LockAcquisitionError < StandardError
+    attr_reader :errors
+
+    def initialize(message, errors)
+      super(message)
+      @errors = errors
+    end
+  end
+
   class Client
     DEFAULT_REDIS_HOST    = ENV["DEFAULT_REDIS_HOST"] || "localhost"
     DEFAULT_REDIS_PORT    = ENV["DEFAULT_REDIS_PORT"] || "6379"
@@ -232,6 +241,7 @@ module Redlock
     def try_lock_instances(resource, ttl, options)
       retry_count = options[:retry_count] || @retry_count
       tries = options[:extend] ? 1 : (retry_count + 1)
+      last_error = nil
 
       tries.times do |attempt_number|
         # Wait a random delay before retrying.
@@ -239,7 +249,11 @@ module Redlock
 
         lock_info = lock_instances(resource, ttl, options)
         return lock_info if lock_info
+      rescue => e
+        last_error = e
       end
+
+      raise last_error if last_error
 
       false
     end
@@ -261,9 +275,15 @@ module Redlock
     def lock_instances(resource, ttl, options)
       value = (options[:extend] || { value: SecureRandom.uuid })[:value]
       allow_new_lock = options[:extend_only_if_locked] ? 'no' : 'yes'
+      errors = []
 
       locked, time_elapsed = timed do
-        @servers.select { |s| s.lock resource, value, ttl, allow_new_lock }.size
+        @servers.count do |s|
+          s.lock(resource, value, ttl, allow_new_lock)
+        rescue => e
+          errors << e
+          false
+        end
       end
 
       validity = ttl - time_elapsed - drift(ttl)
@@ -272,6 +292,11 @@ module Redlock
         { validity: validity, resource: resource, value: value }
       else
         @servers.each { |s| s.unlock(resource, value) }
+
+        if errors.size >= @quorum
+          raise LockAcquisitionError.new('Too many Redis errors prevented lock acquisition', errors)
+        end
+
         false
       end
     end

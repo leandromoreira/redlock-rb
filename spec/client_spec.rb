@@ -76,6 +76,38 @@ RSpec.describe Redlock::Client do
     context 'when lock is available' do
       after(:each) { lock_manager.unlock(@lock_info) if @lock_info }
 
+      context 'when redis connection error occurs' do
+        let(:servers_with_quorum) {
+          [
+            "redis://#{redis1_host}:#{redis1_port}",
+            "redis://#{redis2_host}:#{redis2_port}",
+            unreachable_redis
+          ]
+        }
+
+        let(:servers_without_quorum) {
+          [
+            "redis://#{redis1_host}:#{redis1_port}",
+            unreachable_redis,
+            unreachable_redis
+          ]
+        }
+
+        it 'locks if majority of redis instances are available' do
+          redlock = Redlock::Client.new(servers_with_quorum)
+
+          expect(redlock.lock(resource_key, ttl)).to be_truthy
+        end
+
+        it 'fails to acquire a lock if majority of Redis instances are not available' do
+          redlock = Redlock::Client.new(servers_without_quorum)
+
+          expect {
+            redlock.lock(resource_key, ttl)
+          }.to raise_error(Redlock::LockAcquisitionError)
+        end
+      end
+
       it 'locks' do
         @lock_info = lock_manager.lock(resource_key, ttl)
 
@@ -266,7 +298,10 @@ RSpec.describe Redlock::Client do
 
         expect {
           lock_manager.lock(resource_key, ttl)
-        }.to raise_error(RedisClient::CannotConnectError)
+        }.to raise_error(Redlock::LockAcquisitionError) do |e|
+          expect(e.errors[0]).to be_a(RedisClient::CannotConnectError)
+          expect(e.errors.count).to eq 1
+        end
       end
     end
 
@@ -278,7 +313,10 @@ RSpec.describe Redlock::Client do
         redis_instance.instance_variable_set(:@redis, unreachable_redis)
         expect {
           lock_manager.lock(resource_key, ttl)
-        }.to raise_error(RedisClient::CannotConnectError)
+        }.to raise_error(Redlock::LockAcquisitionError) do |e|
+          expect(e.errors[0]).to be_a(RedisClient::CannotConnectError)
+          expect(e.errors.count).to eq 1
+        end
         redis_instance.instance_variable_set(:@redis, old_redis)
         expect(lock_manager.lock(resource_key, ttl)).to be_truthy
       end
@@ -308,11 +346,15 @@ RSpec.describe Redlock::Client do
           # This time we do not pass it through to Redis, in order to simulate a passing
           # call to LOAD SCRIPT followed by another NOSCRIPT error. Imagine someone
           # repeatedly calling SCRIPT FLUSH on our Redis instance.
-          expect(@manipulated_instance).to receive(:load_scripts)
+          expect(@manipulated_instance).to receive(:load_scripts).exactly(8).times
 
           expect {
             lock_manager.lock(resource_key, ttl)
-          }.to raise_error(/NOSCRIPT/)
+          }.to raise_error(Redlock::LockAcquisitionError) do |e|
+            expect(e.errors[0]).to be_a(RedisClient::CommandError)
+            expect(e.errors[0].message).to match(/NOSCRIPT/)
+            expect(e.errors.count).to eq 1
+          end
         end
       end
 
