@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'redis-client'
+  spec.add_dependency 'redis-client', '~> 0.14.1'
 
   spec.add_development_dependency 'connection_pool', '~> 2.2'
   spec.add_development_dependency 'coveralls', '~> 0.8'
