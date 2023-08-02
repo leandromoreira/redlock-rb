@@ -169,9 +169,32 @@ module Redlock
           if connection.respond_to?(:client)
             @redis = connection
           else
-            @redis = RedisClient.new(connection)
+            @redis = initialize_client(connection)
           end
           @redis.extend(ConnectionPoolLike)
+        end
+      end
+
+      def initialize_client(options)
+        if options.key?(:sentinels)
+          if url = options.delete(:url)
+            uri = URI.parse(url)
+            if !options.key?(:name) && uri.host
+              options[:name] = uri.host
+            end
+
+            if !options.key?(:password) && uri.password && !uri.password.empty?
+              options[:password] = uri.password
+            end
+
+            if !options.key?(:username) && uri.user && !uri.user.empty?
+              options[:username] = uri.user
+            end
+          end
+
+          RedisClient.sentinel(**options).new_client
+        else
+          RedisClient.config(**options).new_client
         end
       end
 
