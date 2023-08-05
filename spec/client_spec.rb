@@ -59,6 +59,16 @@ RSpec.describe Redlock::Client do
       lock_manager.unlock(lock_info)
     end
 
+    it 'accepts Configuration hashes' do
+      config = { url: "redis://#{redis1_host}:#{redis1_port}" }
+      _redlock = Redlock::Client.new([config])
+
+      lock_info = lock_manager.lock(resource_key, ttl)
+      expect(lock_info).to be_a(Hash)
+      expect(resource_key).to_not be_lockable(lock_manager, ttl)
+      lock_manager.unlock(lock_info)
+    end
+
     it 'does not load scripts' do
       redis_client.call('SCRIPT', 'FLUSH')
 
