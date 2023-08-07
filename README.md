@@ -18,6 +18,9 @@ This is an implementation of a proposed [distributed lock algorithm with Redis](
 * It works with Redis server versions 6.0 or later.
 * Redlock >= 2.0 only works with [`RedisClient`](https://github.com/redis-rb/redis-client) client instance.
 
+If you'd like to enable auto-reconnect attempts like in Redis 5,
+be sure to instantiate a RedisClient with `reconnect_attempts: 1`.
+
 ## Installation
 
 Add this line to your application's Gemfile:
