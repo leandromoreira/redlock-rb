@@ -176,14 +176,29 @@ lock_manager.get_remaining_ttl_for_resource(resource)
 
 ## Redis client configuration
 
-`Redlock::Client` expects URLs or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
+`Redlock::Client` expects URLs, or configurations or Redis objects on initialization. Redis objects should be used for configuring the connection in more detail, i.e. setting username and password.
 
 ```ruby
 servers = [ 'redis://localhost:6379', RedisClient.new(:url => 'redis://someotherhost:6379') ]
 redlock = Redlock::Client.new(servers)
 ```
 
-Redlock works seamlessly with [redis sentinel](http://redis.io/topics/sentinel), which is supported in redis 3.2+.
+To utilize `Redlock::Client` with sentinels you can pass an instance of `RedisClient` or just a configuration hash as part of the servers array during initialization.
+
+```ruby
+config = {
+  name: "mymaster",
+  sentinels: [
+    { host: "127.0.0.1", port: 26380 },
+    { host: "127.0.0.1", port: 26381 },
+  ],
+  role: :master
+}
+client = RedisClient.sentinel(**config).new_client
+servers = [ config, client ]
+redlock = Redlock::Client.new(servers)
+```
+Redlock supports the same configuration hash as `RedisClient`.
 
 ## Redlock configuration
 
