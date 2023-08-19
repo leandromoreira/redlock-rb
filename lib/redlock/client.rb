@@ -1,3 +1,4 @@
+require 'monitor'
 require 'redis-client'
 require 'securerandom'
 
@@ -163,6 +164,8 @@ module Redlock
       end
 
       def initialize(connection)
+        @monitor = Monitor.new
+
         if connection.respond_to?(:with)
           @redis = connection
         else
@@ -198,9 +201,13 @@ module Redlock
         end
       end
 
+      def synchronize
+        @monitor.synchronize { @redis.with { |connection| yield(connection) } }
+      end
+
       def lock(resource, val, ttl, allow_new_lock)
         recover_from_script_flush do
-          @redis.with { |conn|
+          synchronize { |conn|
             conn.call('EVALSHA', Scripts::LOCK_SCRIPT_SHA, 1, resource, val, ttl, allow_new_lock)
           }
         end
@@ -208,7 +215,7 @@ module Redlock
 
       def unlock(resource, val)
         recover_from_script_flush do
-          @redis.with { |conn|
+          synchronize { |conn|
             conn.call('EVALSHA', Scripts::UNLOCK_SCRIPT_SHA, 1, resource, val)
           }
         end
@@ -218,7 +225,7 @@ module Redlock
 
       def get_remaining_ttl(resource)
         recover_from_script_flush do
-          @redis.with { |conn|
+          synchronize { |conn|
             conn.call('EVALSHA', Scripts::PTTL_SCRIPT_SHA, 1, resource)
           }
         end
@@ -235,7 +242,7 @@ module Redlock
           Scripts::PTTL_SCRIPT
         ]
 
-        @redis.with do |connnection|
+        synchronize do |connnection|
           scripts.each do |script|
             connnection.call('SCRIPT', 'LOAD', script)
           end
