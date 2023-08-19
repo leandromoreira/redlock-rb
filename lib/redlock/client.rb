@@ -5,7 +5,7 @@ require 'securerandom'
 module Redlock
   include Scripts
 
-  class LockAcquisitionError < StandardError
+  class LockAcquisitionError < LockError
     attr_reader :errors
 
     def initialize(message, errors)
