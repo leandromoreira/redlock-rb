@@ -30,11 +30,7 @@ RSpec.describe Redlock::Client do
   let(:redis3_host) { ENV["REDIS3_HOST"] || "127.0.0.1" }
   let(:redis3_port) { ENV["REDIS3_PORT"] || "6379" }
   let(:unreachable_redis) {
-    redis = RedisClient.new(url: 'redis://localhost:46864')
-    def redis.with
-      yield self
-    end
-    redis
+    RedisClient.new(url: 'redis://localhost:46864')
   }
 
   describe 'initialize' do

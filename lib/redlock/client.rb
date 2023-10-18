@@ -157,24 +157,19 @@ module Redlock
     private
 
     class RedisInstance
-      module ConnectionPoolLike
-        def with
-          yield self
-        end
-      end
-
       def initialize(connection)
         @monitor = Monitor.new
 
-        if connection.respond_to?(:with)
+        if connection.respond_to?(:call)
           @redis = connection
         else
           if connection.respond_to?(:client)
             @redis = connection
-          else
+          elsif connection.respond_to?(:key?)
             @redis = initialize_client(connection)
+          else
+            @redis = connection
           end
-          @redis.extend(ConnectionPoolLike)
         end
       end
 
@@ -202,7 +197,7 @@ module Redlock
       end
 
       def synchronize
-        @monitor.synchronize { @redis.with { |connection| yield(connection) } }
+        @monitor.synchronize { @redis.then { |connection| yield(connection) } }
       end
 
       def lock(resource, val, ttl, allow_new_lock)
