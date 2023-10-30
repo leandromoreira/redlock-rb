@@ -319,7 +319,8 @@ module Redlock
         @servers.each { |s| s.unlock(resource, value) }
 
         if errors.size >= @quorum
-          raise LockAcquisitionError.new('Too many Redis errors prevented lock acquisition', errors)
+          err_msgs = errors.map { |e| "#{e.class}: #{e.message}" }.join("\n")
+          raise LockAcquisitionError.new("Too many Redis errors prevented lock acquisition:\n#{err_msgs}", errors)
         end
 
         false

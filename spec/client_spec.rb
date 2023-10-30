@@ -108,9 +108,19 @@ RSpec.describe Redlock::Client do
         it 'fails to acquire a lock if majority of Redis instances are not available' do
           redlock = Redlock::Client.new(servers_without_quorum)
 
+          expected_msg = <<~MSG
+            failed to acquire lock on 'Too many Redis errors prevented lock acquisition:
+            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864
+            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864'
+          MSG
+
           expect {
             redlock.lock(resource_key, ttl)
-          }.to raise_error(Redlock::LockAcquisitionError)
+          }.to raise_error do |error|
+            expect(error).to be_a(Redlock::LockAcquisitionError)
+            expect(error.message).to eq(expected_msg.chomp)
+            expect(error.errors.size).to eq(2)
+          end
         end
       end
 
