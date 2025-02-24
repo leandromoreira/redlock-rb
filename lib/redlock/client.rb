@@ -113,7 +113,7 @@ module Redlock
 
       lock(resource, *args) do |lock_info|
         raise LockError, resource unless lock_info
-        return yield
+        return yield lock_info
       end
     end
 
