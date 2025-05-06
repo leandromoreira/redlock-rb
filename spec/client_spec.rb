@@ -110,8 +110,8 @@ RSpec.describe Redlock::Client do
 
           expected_msg = <<~MSG
             failed to acquire lock on 'Too many Redis errors prevented lock acquisition:
-            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864
-            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864'
+            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864 (redis://localhost:46864)
+            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864 (redis://localhost:46864)'
           MSG
 
           expect {
