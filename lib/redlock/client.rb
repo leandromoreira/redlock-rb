@@ -244,11 +244,25 @@ module Redlock
         end
       end
 
+      # Exception classes that may be raised for NOSCRIPT errors.
+      # RedisClient::CommandError is raised when using redis-client directly.
+      # Redis::CommandError (or its subclass Redis::NoScriptError) is raised
+      # when using the redis gem wrapper.
+      # See: https://github.com/leandromoreira/redlock-rb/issues/124
+      # See: https://github.com/leandromoreira/redlock-rb/issues/148
+      def script_error_classes
+        @script_error_classes ||= begin
+          classes = [RedisClient::CommandError]
+          classes << Redis::CommandError if defined?(Redis::CommandError)
+          classes
+        end
+      end
+
       def recover_from_script_flush
         retry_on_noscript = true
         begin
           yield
-        rescue RedisClient::CommandError => e
+        rescue *script_error_classes => e
           # When somebody has flushed the Redis instance's script cache, we might
           # want to reload our scripts. Only attempt this once, though, to avoid
           # going into an infinite loop.
