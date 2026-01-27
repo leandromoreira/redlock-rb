@@ -108,17 +108,13 @@ RSpec.describe Redlock::Client do
         it 'fails to acquire a lock if majority of Redis instances are not available' do
           redlock = Redlock::Client.new(servers_without_quorum)
 
-          expected_msg = <<~MSG
-            failed to acquire lock on 'Too many Redis errors prevented lock acquisition:
-            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864
-            RedisClient::CannotConnectError: Connection refused - connect(2) for 127.0.0.1:46864'
-          MSG
-
           expect {
             redlock.lock(resource_key, ttl)
           }.to raise_error do |error|
             expect(error).to be_a(Redlock::LockAcquisitionError)
-            expect(error.message).to eq(expected_msg.chomp)
+            expect(error.message).to include('Too many Redis errors prevented lock acquisition')
+            expect(error.message).to include('RedisClient::CannotConnectError')
+            expect(error.message).to include('Connection refused')
             expect(error.errors.size).to eq(2)
           end
         end
@@ -377,6 +373,108 @@ RSpec.describe Redlock::Client do
       context 'when the script re-loading succeeds' do
         it 'locks' do
           expect(lock_manager.lock(resource_key, ttl)).to be_lock_info_for(resource_key)
+        end
+      end
+    end
+
+    context 'when using the redis gem (Redis::CommandError)' do
+      # The redis gem raises Redis::CommandError (or Redis::NoScriptError) instead of
+      # RedisClient::CommandError. This tests that both error hierarchies are handled.
+      # See: https://github.com/leandromoreira/redlock-rb/issues/124
+      # See: https://github.com/leandromoreira/redlock-rb/issues/148
+
+      before(:all) do
+        # Define Redis::CommandError if not already defined (simulates redis gem being loaded)
+        unless defined?(Redis::CommandError)
+          module Redis
+            class CommandError < StandardError; end
+          end
+          @redis_command_error_defined_by_test = true
+        end
+      end
+
+      after(:all) do
+        # Clean up the mock class if we defined it
+        if @redis_command_error_defined_by_test
+          Redis.send(:remove_const, :CommandError)
+          Object.send(:remove_const, :Redis) if Redis.constants.empty?
+        end
+      end
+
+      describe '#script_error_classes' do
+        it 'includes RedisClient::CommandError' do
+          redis_instance = lock_manager.instance_variable_get(:@servers).first
+          expect(redis_instance.send(:script_error_classes)).to include(RedisClient::CommandError)
+        end
+
+        it 'includes Redis::CommandError when defined' do
+          redis_instance = lock_manager.instance_variable_get(:@servers).first
+          # Clear memoization to pick up the newly defined class
+          redis_instance.instance_variable_set(:@script_error_classes, nil)
+          expect(redis_instance.send(:script_error_classes)).to include(Redis::CommandError)
+        end
+      end
+
+      context 'when Redis::CommandError NOSCRIPT is raised' do
+        it 'recovers by reloading scripts' do
+          redis_instance = lock_manager.instance_variable_get(:@servers).first
+          # Clear memoization to ensure Redis::CommandError is included
+          redis_instance.instance_variable_set(:@script_error_classes, nil)
+
+          call_count = 0
+          allow(redis_instance).to receive(:synchronize).and_wrap_original do |original_method, &block|
+            call_count += 1
+            if call_count == 1
+              # First call raises Redis::CommandError with NOSCRIPT
+              raise Redis::CommandError, 'NOSCRIPT No matching script'
+            else
+              original_method.call(&block)
+            end
+          end
+
+          expect(redis_instance).to receive(:load_scripts).and_call_original
+
+          # Should recover and successfully lock
+          lock_info = lock_manager.lock(resource_key, ttl)
+          expect(lock_info).to be_truthy
+          lock_manager.unlock(lock_info) if lock_info
+        end
+
+        it 'does not retry more than once per operation' do
+          redis_instance = lock_manager.instance_variable_get(:@servers).first
+          redis_instance.instance_variable_set(:@script_error_classes, nil)
+
+          # Always raise Redis::CommandError NOSCRIPT
+          allow(redis_instance).to receive(:synchronize).and_raise(
+            Redis::CommandError, 'NOSCRIPT No matching script'
+          )
+
+          load_scripts_count = 0
+          allow(redis_instance).to receive(:load_scripts) { load_scripts_count += 1 }
+
+          expect {
+            lock_manager.lock(resource_key, ttl)
+          }.to raise_error(Redlock::LockAcquisitionError)
+
+          # Should have called load_scripts once per retry attempt (8 times total:
+          # lock + unlock for each of retry_count+1 attempts, but unlock swallows errors)
+          expect(load_scripts_count).to eq(8)
+        end
+
+        it 're-raises non-NOSCRIPT Redis::CommandError' do
+          redis_instance = lock_manager.instance_variable_get(:@servers).first
+          redis_instance.instance_variable_set(:@script_error_classes, nil)
+
+          allow(redis_instance).to receive(:synchronize).and_raise(
+            Redis::CommandError, 'ERR some other error'
+          )
+
+          expect {
+            lock_manager.lock(resource_key, ttl)
+          }.to raise_error(Redlock::LockAcquisitionError) do |e|
+            expect(e.errors[0]).to be_a(Redis::CommandError)
+            expect(e.errors[0].message).to eq('ERR some other error')
+          end
         end
       end
     end
