@@ -5,14 +5,15 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'redlock/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'redlock'
-  spec.version       = Redlock::VERSION
-  spec.authors       = ['Leandro Moreira']
-  spec.email         = ['leandro.ribeiro.moreira@gmail.com']
-  spec.summary       = 'Distributed lock using Redis written in Ruby.'
-  spec.description   = 'Distributed lock using Redis written in Ruby. Highly inspired by https://github.com/antirez/redlock-rb.'
-  spec.homepage      = 'https://github.com/leandromoreira/redlock-rb'
-  spec.license       = 'BSD-2-Clause'
+  spec.name                  = 'redlock'
+  spec.version               = Redlock::VERSION
+  spec.authors               = ['Leandro Moreira']
+  spec.email                 = ['leandro.ribeiro.moreira@gmail.com']
+  spec.summary               = 'Distributed lock using Redis written in Ruby.'
+  spec.description           = 'Distributed lock using Redis written in Ruby. Highly inspired by https://github.com/antirez/redlock-rb.'
+  spec.homepage              = 'https://github.com/leandromoreira/redlock-rb'
+  spec.license               = 'BSD-2-Clause'
+  spec.required_ruby_version = '>= 2.7.0'
 
   spec.files         = `git ls-files -z`.split("\x0")
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
