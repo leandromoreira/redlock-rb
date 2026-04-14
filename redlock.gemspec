@@ -15,8 +15,7 @@ Gem::Specification.new do |spec|
   spec.license               = 'BSD-2-Clause'
   spec.required_ruby_version = '>= 2.7.0'
 
-  spec.files         = `git ls-files -z`.split("\x0")
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  spec.files         = `git ls-files lib -z`.split("\x0") + ['CHANGELOG.md', 'LICENSE', 'README.md']
   spec.require_paths = ['lib']
 
   spec.add_dependency 'redis-client', '>= 0.14.1', '< 1.0.0'
