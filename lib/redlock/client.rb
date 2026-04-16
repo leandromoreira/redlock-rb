@@ -160,17 +160,12 @@ module Redlock
       def initialize(connection)
         @monitor = Monitor.new
 
-        if connection.respond_to?(:call)
-          @redis = connection
-        else
-          if connection.respond_to?(:client)
-            @redis = connection
-          elsif connection.respond_to?(:key?)
-            @redis = initialize_client(connection)
+        @redis =
+          if connection.is_a?(Hash)
+            initialize_client(connection)
           else
-            @redis = connection
+            connection
           end
-        end
       end
 
       def initialize_client(options)

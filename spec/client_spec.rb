@@ -65,6 +65,20 @@ RSpec.describe Redlock::Client do
       lock_manager.unlock(lock_info)
     end
 
+    it 'accepts hashes responding to call like ActiveSupport::OrderedOptions' do
+      callable_hash = Class.new(Hash) do
+        def call; end
+      end
+
+      config = callable_hash.new.merge(url: "redis://#{redis1_host}:#{redis1_port}")
+      redlock = Redlock::Client.new([config])
+
+      lock_info = redlock.lock(resource_key, ttl)
+      expect(lock_info).to be_a(Hash)
+      expect(resource_key).to_not be_lockable(lock_manager, ttl)
+      redlock.unlock(lock_info)
+    end
+
     it 'does not load scripts' do
       redis_client.call('SCRIPT', 'FLUSH')
 
